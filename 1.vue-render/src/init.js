@@ -3,7 +3,7 @@
  */
 
 import { compileToFunction } from './compiler'
-// import { mountComponent } from './lifecycle'
+import { mountComponent } from './lifecycle'
 import { initState } from './state'
 
 // 就是给Vue增加init方法的
@@ -30,10 +30,10 @@ export function initMixin(Vue) {
     if (!ops.render) {
       let template
       // 没有render函数，看一下是否写了tempate, 没写template则采用外部的template
-      if (!ops.template && el) {
-        template = el.outerHTML
-      } else if (ops.template && el) {
+      if (ops.template && el) {
         template = ops.template
+      } else if (!ops.template && el) {
+        template = el.outerHTML
       }
       if (template && el) {
         // 这里需要对模板进行编译
@@ -41,8 +41,7 @@ export function initMixin(Vue) {
         ops.render = render // 最终会被编译成 h('xxx')
       }
     }
-    // mountComponent(vm, el) // 组件的挂载
-    // 最终就可以获取render方法
+    mountComponent(vm, el) // 组件的挂载
 
     // script 标签引用的 vue.global.js 这个编译过程是在浏览器运行的
     // runtime是不包含模板编译的, 整个编译是打包的时候通过loader来转义.vue文件的, 用runtime的时候不能使用template

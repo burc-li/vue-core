@@ -14,7 +14,7 @@ function genProps(attrs) {
       // 可以使用 qs 库
       attr.value.split(';').forEach(item => {
         let [key, value] = item.split(':')
-        obj[key] = value.trim()
+        obj[key.trim()] = value.trim()
       })
       attr.value = obj
     }
