@@ -1,20 +1,16 @@
 /**
- * @name attrs
+ * @name 正则表达式，用于匹配开始标签、结束标签、属性
  * @returns
  */
 
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z]*`
 const qnameCapture = `((?:${ncname}\\:)?${ncname})`
-
 // 匹配的是 <xxx  第一个分组就是开始标签的名字
 const startTagOpen = new RegExp(`^<${qnameCapture}`)
-
 // 匹配的是 </xxxx>  第一个分组就是结束标签的名字
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
-
 // 分组1: 属性的key 分组2: =  分组3/分组4/分组5: value值
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/ // 匹配属性
-
 const startTagClose = /^\s*(\/?)>/ // 匹配开始标签的结束 > 或 />  <div id = 'app' >  <br/>
 
 /**

@@ -5,22 +5,18 @@
 })(this, (function () { 'use strict';
 
   /**
-   * @name attrs
+   * @name 正则表达式，用于匹配开始标签、结束标签、属性
    * @returns
    */
 
   const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z]*`;
   const qnameCapture = `((?:${ncname}\\:)?${ncname})`;
-
   // 匹配的是 <xxx  第一个分组就是开始标签的名字
   const startTagOpen = new RegExp(`^<${qnameCapture}`);
-
   // 匹配的是 </xxxx>  第一个分组就是结束标签的名字
   const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`);
-
   // 分组1: 属性的key 分组2: =  分组3/分组4/分组5: value值
   const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // 匹配属性
-
   const startTagClose = /^\s*(\/?)>/; // 匹配开始标签的结束 > 或 />  <div id = 'app' >  <br/>
 
   /**
@@ -150,10 +146,6 @@
     return root;
   }
 
-  /**
-   * @name attrs
-   * @returns
-   */
   // 根据ast语法树的 attrs属性对象 生成相对应的属性字符串
   function genProps(attrs) {
     let str = '';
@@ -212,7 +204,12 @@
     return children.map(child => gen(child)).join(',');
   }
 
-  // 代码生成
+  /**
+   * @name 代码生成
+   * @desc 生成指定格式的render方法代码字符串，再利用模版引擎生成render函数
+   * @desc 我们会在Vue原型上扩展 render 函数相关的方法， _c _s _v
+   * @desc _c: 创建节点虚拟DOM  _v: 创建文本虚拟DOM _s: 处理变量
+   */
   function codegen(ast) {
     let children = genChildren(ast.children);
     let code = `_c('${ast.tag}',${ast.attrs.length > 0 ? genProps(ast.attrs) : 'null'}${ast.children.length ? `,${children}` : ''})`;
@@ -237,18 +234,24 @@
   }
 
   //  html模版字符串
-  //  <div id="app" style="color: red; background: yellow">
-  //     hello {{name}} world
-  //     <span></span>
-  //  </div>
+  // <div id="app" style="color: red; background: yellow">
+  //   hello {{ name }} world
+  //   <span></span>
+  // </div>
 
   // 转换为 AST语法树
   // {
   //   tag: 'div',
   //   type: 1,
-  //   attrs: [{...},{...}],
+  //   attrs: [
+  //     { name: 'id', value: 'app' },
+  //     { name: 'style', value: { color: 'red', background: 'yellow' } },
+  //   ],
   //   parent: null,
-  //   children: [{...},{...}],
+  //   children: [
+  //     { text: 'hello{{name}}world', type: 3, parent: {...} },
+  //     { tag: 'span', type: 1, attrs: [], children: [], parent: {...} },
+  //   ],
   // }
 
   // 将 AST语法树 转化成 render函数
@@ -256,8 +259,7 @@
   // _c('div',{id:"app",style:{"color":"red"," background":"yellow"}},_v("hello"+_s(name)+"world"),_c('span',null))
 
   /**
-   * @name attrs
-   * @returns
+   * @name 虚拟DOM相关方法
    */
 
   // h()  _c() 创建元素的虚拟DOM
@@ -292,10 +294,14 @@
   }
 
   /**
-   * @name attrs
-   * @returns
+   * @name 初始化元素
+   * @desc 在Vue原型上扩展 render 函数相关的方法， _c _s _v _update...
+   * @desc 调用render方法产生虚拟节点，即虚拟DOM
+   * @desc 将vnode转化成真实dom 并 挂载页面
+   * @desc patch既有初始化元素的功能 ，又有更新元素的功能
    */
 
+  // 利用vnode创建真实元素
   function createElm(vnode) {
     let {
       tag,
@@ -315,6 +321,7 @@
     }
     return vnode.el;
   }
+  // 对比属性打补丁
   function patchProps(el, props) {
     for (let key in props) {
       if (key === 'style') {
@@ -328,6 +335,7 @@
       }
     }
   }
+  // patch既有初始化元素的功能 ，又有更新元素的功能
   function patch(oldVNode, vnode) {
     // 写的是初渲染流程
     const isRealElement = oldVNode.nodeType;
@@ -342,15 +350,9 @@
       return newElm;
     }
   }
-  function initLifeCycle(Vue) {
-    Vue.prototype._update = function (vnode) {
-      // 将vnode转化成真实dom
-      const vm = this;
-      const el = vm.$el;
-      // patch既有初始化元素的功能 ，又有更新元素的功能
-      vm.$el = patch(el, vnode);
-    };
 
+  // 在Vue原型上扩展 render 函数相关的方法， _c _s _v ...
+  function initLifeCycle(Vue) {
     // _c('div',{},...children)
     // _c('div',{id:"app",style:{"color":"red"," background":"yellow"}},_v("hello"+_s(name)+"world"),_c('span',null))
     Vue.prototype._c = function () {
@@ -369,8 +371,17 @@
       const vm = this;
       return vm.$options.render.call(vm); // 通过ast语法转义后生成的 render方法
     };
+
+    Vue.prototype._update = function (vnode) {
+      // 将vnode转化成真实dom
+      const vm = this;
+      const el = vm.$el;
+      // patch既有初始化元素的功能 ，又有更新元素的功能
+      vm.$el = patch(el, vnode);
+    };
   }
 
+  // 初始化元素
   function mountComponent(vm, el) {
     // 这里的el 是通过querySelector获取的
     vm.$el = el;

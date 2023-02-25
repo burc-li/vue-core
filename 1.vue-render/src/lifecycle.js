@@ -1,10 +1,14 @@
 import { createElementVNode, createTextVNode } from './vdom'
 
 /**
- * @name attrs
- * @returns
+ * @name 初始化元素
+ * @desc 在Vue原型上扩展 render 函数相关的方法， _c _s _v _update...
+ * @desc 调用render方法产生虚拟节点，即虚拟DOM
+ * @desc 将vnode转化成真实dom 并 挂载页面
+ * @desc patch既有初始化元素的功能 ，又有更新元素的功能
  */
 
+// 利用vnode创建真实元素
 function createElm(vnode) {
   let { tag, data, children, text } = vnode
   if (typeof tag === 'string') {
@@ -19,6 +23,7 @@ function createElm(vnode) {
   }
   return vnode.el
 }
+// 对比属性打补丁
 function patchProps(el, props) {
   for (let key in props) {
     if (key === 'style') {
@@ -32,6 +37,7 @@ function patchProps(el, props) {
     }
   }
 }
+// patch既有初始化元素的功能 ，又有更新元素的功能
 function patch(oldVNode, vnode) {
   // 写的是初渲染流程
   const isRealElement = oldVNode.nodeType
@@ -50,15 +56,8 @@ function patch(oldVNode, vnode) {
   }
 }
 
+// 在Vue原型上扩展 render 函数相关的方法， _c _s _v ...
 export function initLifeCycle(Vue) {
-  Vue.prototype._update = function (vnode) {
-    // 将vnode转化成真实dom
-    const vm = this
-    const el = vm.$el
-    // patch既有初始化元素的功能 ，又有更新元素的功能
-    vm.$el = patch(el, vnode)
-  }
-
   // _c('div',{},...children)
   // _c('div',{id:"app",style:{"color":"red"," background":"yellow"}},_v("hello"+_s(name)+"world"),_c('span',null))
   Vue.prototype._c = function () {
@@ -77,8 +76,16 @@ export function initLifeCycle(Vue) {
     const vm = this
     return vm.$options.render.call(vm) // 通过ast语法转义后生成的 render方法
   }
+  Vue.prototype._update = function (vnode) {
+    // 将vnode转化成真实dom
+    const vm = this
+    const el = vm.$el
+    // patch既有初始化元素的功能 ，又有更新元素的功能
+    vm.$el = patch(el, vnode)
+  }
 }
 
+// 初始化元素
 export function mountComponent(vm, el) {
   // 这里的el 是通过querySelector获取的
   vm.$el = el

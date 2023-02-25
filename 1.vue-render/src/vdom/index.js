@@ -1,6 +1,5 @@
 /**
- * @name attrs
- * @returns
+ * @name 虚拟DOM相关方法
  */
 
 // h()  _c() 创建元素的虚拟DOM

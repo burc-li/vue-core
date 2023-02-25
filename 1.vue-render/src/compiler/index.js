@@ -1,8 +1,5 @@
 import { parseHTML } from './parse'
-/**
- * @name attrs
- * @returns
- */
+
 // 根据ast语法树的 attrs属性对象 生成相对应的属性字符串
 function genProps(attrs) {
   let str = ''
@@ -61,7 +58,12 @@ function genChildren(children) {
   return children.map(child => gen(child)).join(',')
 }
 
-// 代码生成
+/**
+ * @name 代码生成
+ * @desc 生成指定格式的render方法代码字符串，再利用模版引擎生成render函数
+ * @desc 我们会在Vue原型上扩展 render 函数相关的方法， _c _s _v
+ * @desc _c: 创建节点虚拟DOM  _v: 创建文本虚拟DOM _s: 处理变量
+ */
 function codegen(ast) {
   let children = genChildren(ast.children)
   let code = `_c('${ast.tag}',${ast.attrs.length > 0 ? genProps(ast.attrs) : 'null'}${ast.children.length ? `,${children}` : ''})`
@@ -90,18 +92,24 @@ export function compileToFunction(template) {
 }
 
 //  html模版字符串
-//  <div id="app" style="color: red; background: yellow">
-//     hello {{name}} world
-//     <span></span>
-//  </div>
+// <div id="app" style="color: red; background: yellow">
+//   hello {{ name }} world
+//   <span></span>
+// </div>
 
 // 转换为 AST语法树
 // {
 //   tag: 'div',
 //   type: 1,
-//   attrs: [{...},{...}],
+//   attrs: [
+//     { name: 'id', value: 'app' },
+//     { name: 'style', value: { color: 'red', background: 'yellow' } },
+//   ],
 //   parent: null,
-//   children: [{...},{...}],
+//   children: [
+//     { text: 'hello{{name}}world', type: 3, parent: {...} },
+//     { tag: 'span', type: 1, attrs: [], children: [], parent: {...} },
+//   ],
 // }
 
 // 将 AST语法树 转化成 render函数
