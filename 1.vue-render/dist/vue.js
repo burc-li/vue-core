@@ -208,7 +208,7 @@
    * @name 代码生成
    * @desc 生成指定格式的render方法代码字符串，再利用模版引擎生成render函数
    * @desc 我们会在Vue原型上扩展 render 函数相关的方法， _c _s _v
-   * @desc _c: 创建节点虚拟DOM  _v: 创建文本虚拟DOM _s: 处理变量
+   * @desc _c: 创建节点虚拟节点VNode    _v: 创建文本虚拟节点VNode   _s: 处理变量
    */
   function codegen(ast) {
     let children = genChildren(ast.children);
@@ -222,7 +222,7 @@
     let ast = parseHTML(template);
     console.log('AST语法树：\n', ast);
 
-    // 2.生成render方法 (render方法执行后的返回的结果就是 虚拟DOM)
+    // 2.生成render方法代码字符串 (render方法执行后的返回的结果就是 虚拟DOM)
     let code = codegen(ast);
     console.log('代码串：\n', code);
 
@@ -254,15 +254,23 @@
   //   ],
   // }
 
-  // 将 AST语法树 转化成 render函数
-  // _c: 创建元素    _v: 创建文本    _s: 变量
-  // _c('div',{id:"app",style:{"color":"red"," background":"yellow"}},_v("hello"+_s(name)+"world"),_c('span',null))
+  // 将 AST语法树 转化成 render代码字符串
+  // _c: 创建节点虚拟节点VNode    _v: 创建文本虚拟节点VNode   _s: 处理变量
+  // `_c('div',{id:"app",style:{"color":"red"," background":"yellow"}},_v("hello"+_s(name)+"world"),_c('span',null))`
+  // 利用模版引擎转换成可执行的render函数
+  // ƒ anonymous(
+  //   ) {
+  //     with(this){
+  //       return _c('div',{id:"app",style:{"color":"red","background":"yellow"}},
+  //                 _v("hello"+_s(name)+"world"),
+  //                 _c('span',null))}
+  //   }
 
   /**
    * @name 虚拟DOM相关方法
    */
 
-  // h()  _c() 创建元素的虚拟DOM
+  // h()  _c() 创建元素的虚拟节点
   function createElementVNode(vm, tag, data, ...children) {
     if (data == null) {
       data = {};
@@ -274,13 +282,13 @@
     return vnode(vm, tag, key, data, children);
   }
 
-  // _v() 创建文本虚拟DOM
+  // _v() 创建文本虚拟节点
   function createTextVNode(vm, text) {
     return vnode(vm, undefined, undefined, undefined, undefined, text);
   }
 
-  // vnode 和 ast一样吗？ ast做的是语法层面的转化，他描述的是语法本身 (可以描述js css html)
-  // 我们的虚拟dom 是描述的dom元素，可以增加一些自定义属性
+  // VNode 和 AST一样吗？ AST做的是语法层面的转化，他描述的是语法本身 (可以描述 js css html)
+  // 我们的VNode 是描述的dom元素，可以增加一些自定义属性
   function vnode(vm, tag, key, data, children, text) {
     return {
       vm,
@@ -296,7 +304,7 @@
   /**
    * @name 初始化元素
    * @desc 在Vue原型上扩展 render 函数相关的方法， _c _s _v _update...
-   * @desc 调用render方法产生虚拟节点，即虚拟DOM
+   * @desc 调用render方法产生虚拟DOM，即以 VNode节点作为基础的树
    * @desc 将vnode转化成真实dom 并 挂载页面
    * @desc patch既有初始化元素的功能 ，又有更新元素的功能
    */
@@ -343,7 +351,7 @@
       const elm = oldVNode; // 获取真实元素
       const parentElm = elm.parentNode; // 拿到父元素
       let newElm = createElm(vnode);
-      console.log('利用vnode创建真实元素', newElm);
+      console.log('利用vnode创建真实元素', newElm, parentElm);
       parentElm.insertBefore(newElm, elm.nextSibling);
       parentElm.removeChild(elm); // 删除老节点
 

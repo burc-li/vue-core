@@ -3,7 +3,7 @@ import { createElementVNode, createTextVNode } from './vdom'
 /**
  * @name 初始化元素
  * @desc 在Vue原型上扩展 render 函数相关的方法， _c _s _v _update...
- * @desc 调用render方法产生虚拟节点，即虚拟DOM
+ * @desc 调用render方法产生虚拟DOM，即以 VNode节点作为基础的树
  * @desc 将vnode转化成真实dom 并 挂载页面
  * @desc patch既有初始化元素的功能 ，又有更新元素的功能
  */
@@ -45,7 +45,7 @@ function patch(oldVNode, vnode) {
     const elm = oldVNode // 获取真实元素
     const parentElm = elm.parentNode // 拿到父元素
     let newElm = createElm(vnode)
-    console.log('利用vnode创建真实元素', newElm)
+    console.log('利用vnode创建真实元素', newElm, parentElm)
 
     parentElm.insertBefore(newElm, elm.nextSibling)
     parentElm.removeChild(elm) // 删除老节点

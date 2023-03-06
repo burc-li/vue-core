@@ -6,26 +6,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
   </head>
+  <style>
+    #myPre {
+      border: 4px solid #f00;
+    }
+    #myPre:focus:before {
+      -webkit-user-select: text;
+      content: ' ';
+    }
+    span:focus:before {
+      -webkit-user-select: text;
+      content: ' ';
+    }
+    a {
+      -webkit-user-select: text;
+      margin-left: 3px;
+      /* display: inline-block;
+      width: 70px; */
+    }
+  </style>
+
   <body>
+    <button onclick="getValue()">获取value</button>
+    <button onclick="setValue()">设置value</button>
+    <button onclick="focusOrSelect()">聚焦选择</button>
+    <pre
+      id="myPre"
+      contenteditable="true"
+    >文本<span>标签内容</span><span ><a contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a>123</span><a contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><a contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><a contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><b>bold</b></pre>
+
     <script src="vue.js"></script>
-    <script>
-      let oldValue = 'DTEA- 业务规则@'
-      let newValue = 'DTEA- 业务@规则@'
+    <script defer>
+      const myPre = document.querySelector('#myPre')
+      function getValue() {
+        console.log('myPre', myPre.innerText)
+      }
+      function setValue() {
+        myPre.innerText = '文本\n123'
+      }
 
-      oldValue = oldValue.split('')
-      newValue = newValue.split('')
+      myPre.addEventListener('click', function (e) {
+        return
+        // 禁用enter默认事件
+        const selection = window.getSelection()
+        const focusNode = selection?.focusNode
+        const focusOffset = selection?.focusOffset
+        if (focusNode) {
+          // 文本填充
+          const startText = focusNode.textContent.slice(0, focusOffset)
+          const endText = focusNode.textContent.slice(focusOffset)
+          const text = startText + '\n' + endText
+          console.log(text)
+          focusNode.textContent = text
 
-      const commonValue = []
-      oldValue.some((i, idx) => {
-        console.log(i)
-        const eq = i === newValue[idx]
-        if (eq) {
-          commonValue.push(i)
+          // 移动光标位置
+          var range = document.createRange()
+          range.setStart(focusNode, focusOffset + 1)
+          selection.removeAllRanges()
+          selection.addRange(range)
         }
-        return !eq
       })
 
-      console.log('commonValue', commonValue.join(''))
+      // false：仅聚焦  true：选择范围
+      function focusOrSelect(select = false) {
+        var range = document.createRange()
+        range.selectNodeContents(myPre)
+        if (!select) {
+          range.collapse(false)
+        }
+        var sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange(range)
+      }
+
+      // 获取光标位置
+      const getCursorIndex = () => {
+        const selection = window.getSelection()
+        return selection?.focusOffset
+      }
+
+      // 获取节点
+      const getRangeNode = () => {
+        const selection = window.getSelection()
+        return selection?.focusNode
+      }
+
+      // 获取 @ 用户
+      const getAtUser = () => {
+        const content = getRangeNode()?.textContent || ''
+        const regx = /@([^@\s]*)$/
+        const match = regx.exec(content.slice(0, getCursorIndex()))
+        if (match && match.length === 2) {
+          return match[1]
+        }
+        return undefined
+      }
     </script>
   </body>
 </html>
