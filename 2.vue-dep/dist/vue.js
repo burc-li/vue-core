@@ -266,6 +266,77 @@
   //                 _c('span',null))}
   //   }
 
+  let id$1 = 0;
+
+  // 每个响应式属性有一个 dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
+  // 需要给每个响应式属性增加一个 dep， 目的就是收集watcher，当响应式数据发生变化时，更新收集的所有 watcher
+
+  // dep 和 watcher 是一个多对多的关系
+  // 一个属性可以在多个组件中使用 （一个 dep 对应多个 watcher）
+  // 一个组件中由多个属性组成 （一个 watcher 对应多个 dep）
+  class Dep {
+    constructor() {
+      this.id = id$1++;
+      this.subs = []; // 这里存放着当前属性对应的 watcher
+    }
+    // 让watcher记住 dep
+    depend() {
+      Dep.target.addDep(this);
+    }
+    // 给当前的 dep 添加 watcher
+    addSub(watcher) {
+      this.subs.push(watcher);
+    }
+    // 更新当前 dep 关联的所有 watcher
+    notify() {
+      this.subs.forEach(watcher => watcher.update());
+    }
+  }
+
+  // 当前渲染的 watcher，静态变量，类似于全局变量，只有一份
+  Dep.target = null;
+
+  let id = 0;
+
+  // 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
+  // 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
+
+  // 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
+  // 2. 调用_render() 会取值，走到 get 上
+  class Watcher {
+    constructor(vm, fn) {
+      this.id = id++;
+      this.getter = fn;
+      this.deps = []; // 用于后续我们实现计算属性，和一些清理工作
+      this.depsId = new Set();
+      this.get();
+    }
+    addDep(dep) {
+      // 一个组件 对应 多个属性 重复的属性不用记录，去重操作
+      let id = dep.id;
+      if (!this.depsId.has(id)) {
+        this.deps.push(dep);
+        this.depsId.add(id);
+        dep.addSub(this); // watcher已经记住了dep，而且已经去重了，此时让 dep 也记住 watcher
+      }
+    }
+
+    get() {
+      // debugger
+      Dep.target = this; // Dep.target 是一个静态属性
+
+      // 执行vm._render时，去vm上取 name 和 age。vm._render -> vm.$options.render.call(vm) -> with(this){} -> _s(name) -> 就会去作用域链 即this 上取 name
+      // JavaScript 查找某个未使用命名空间的变量时，会通过作用域链来查找，作用域链是跟执行代码的 context 或者包含这个变量的函数有关。'with'语句将某个对象添加到作用域链的顶部，如果在 statement 中有某个未使用命名空间的变量，跟作用域链中的某个属性同名，则这个变量将指向这个属性值
+      this.getter();
+      Dep.target = null; // 渲染完毕后就清空，保证了只有在模版渲染阶段的取值操作才会进行依赖收集
+    }
+    // 重新渲染
+    update() {
+      console.log('watcher-update');
+      this.get();
+    }
+  }
+
   /**
    * @name 虚拟DOM相关方法
    */
@@ -335,7 +406,6 @@
       if (key === 'style') {
         // { color: 'red', "background": 'yellow' }
         for (let styleName in props.style) {
-          console.log(styleName, props.style[styleName]);
           el.style[styleName] = props.style[styleName];
         }
       } else {
@@ -351,7 +421,7 @@
       const elm = oldVNode; // 获取真实元素
       const parentElm = elm.parentNode; // 拿到父元素
       let newElm = createElm(vnode);
-      console.log('利用vnode创建真实元素', newElm, parentElm);
+      console.log('利用vnode创建真实元素\n', newElm, parentElm);
       parentElm.insertBefore(newElm, elm.nextSibling);
       parentElm.removeChild(elm); // 删除老节点
 
@@ -393,15 +463,15 @@
   function mountComponent(vm, el) {
     // 这里的el 是通过querySelector获取的
     vm.$el = el;
+    const updateComponent = () => {
+      // vm._render 创建虚拟DOM
+      // vm._update 把 VNode 渲染成真实的DOM
+      vm._update(vm._render());
+    };
 
-    // 1.调用render方法产生虚拟节点，即虚拟DOM
-    const vnode = vm._render(); // 内部调用 vm.$options.render()
-    console.log('虚拟节点vnode', vnode);
-
-    // 2.根据虚拟DOM产生真实DOM
-    vm._update(vnode);
-
-    // 3.插入到el元素中
+    // true用于标识是一个渲染watcher
+    const watcher = new Watcher(vm, updateComponent, true);
+    console.log('watcher', watcher);
   }
 
   // vue核心流程
@@ -497,22 +567,31 @@
   function defineReactive(target, key, value) {
     // 深度属性劫持，对所有的对象都进行属性劫持
     observe(value);
+    let dep = new Dep(); // 每一个属性都有一个 dep
 
     // Object.defineProperty只能劫持已经存在的属性，新增属性无法劫持 （vue里面会为此单独写一些语法糖  $set $delete）
     Object.defineProperty(target, key, {
       // 取值的时候 会执行get
       get() {
+        // 保证了只有在模版渲染阶段的取值操作才会进行依赖收集
+        if (Dep.target) {
+          dep.depend(); // 让当前的watcher 记住这个 dep；同时让这个属性的 dep 记住当前的 watcher
+        }
+
         console.log('get_v2');
         return value;
       },
       // 修改的时候 会执行set
       set(newValue) {
-        console.log('set_v2');
+        // console.log('set_v2')
         if (newValue === value) return;
 
         // 修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
         observe(newValue);
         value = newValue;
+
+        // 通知更新
+        dep.notify();
       }
     });
   }

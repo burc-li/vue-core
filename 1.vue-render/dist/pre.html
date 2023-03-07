@@ -9,6 +9,7 @@
   <style>
     #myPre {
       border: 4px solid #f00;
+      white-space: pre-line;
     }
     #myPre:focus:before {
       -webkit-user-select: text;
@@ -33,11 +34,80 @@
     <pre
       id="myPre"
       contenteditable="true"
-    >文本<span>标签内容</span><span ><a contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a>123</span><a contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><a contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><a contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><b>bold</b></pre>
+    >文本123<span>标签内容</span><a id="9r043ur49" contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><span>标签内容</span><a id="9r043ur49" contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><span>标签内容</span></pre>
 
     <script src="vue.js"></script>
     <script defer>
       const myPre = document.querySelector('#myPre')
+      const list = genChildren(myPre.childNodes)
+      const multiText = handleSplitArr(list)
+      console.log('list', list)
+      console.log('multiText', multiText)
+
+      function handleSplitArr(list) {
+        let _arr = []
+        let text = ''
+
+        list.forEach((item, index) => {
+          console.log('item.tagName', item.tagName)
+          // 当前项不是 a标签 && 当前项是最后一个元素 或 下一项是存在&&下一项是a标签
+          if (item.tagName !== 'A' && (index === list.length - 1 || list[index + 1].tagName === 'A')) {
+            text += item.text
+            _arr.push({
+              category: 'normal',
+              label: text,
+            })
+            text = ''
+            return
+          }
+          if (item.tagName === 'A') {
+            _arr.push({
+              category: 'hyperlink',
+              label: item.text,
+              // ciCode: data.ciCode,
+              // diagramId: _this.currDiagramId,
+              // dirType: _this.getDirType,
+            })
+            text = ''
+          } else {
+            text += item.text
+          }
+        })
+        return _arr
+      }
+
+      function gen(child) {
+        // 如果是元素 && 不是a标签
+        if (child.nodeType === 1 && child.nodeName !== 'A') {
+          return genChildren(child.childNodes)
+        } else if (child.nodeType === 1 && child.nodeName === 'A') {
+          return [
+            {
+              ciCode: child.id,
+              tagName: child.nodeName,
+              text: child.textContent,
+            },
+          ]
+        }
+        // 如果是文本
+        else if (child.nodeType === 3) {
+          return [
+            {
+              tagName: child.nodeName,
+              text: child.textContent,
+            },
+          ]
+        }
+      }
+      function genChildren(children) {
+        children = Array.from(children)
+        let list = []
+        children.map(child => {
+          list.push(...gen(child))
+        })
+        return list
+      }
+
       function getValue() {
         console.log('myPre', myPre.innerText)
       }

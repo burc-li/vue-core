@@ -10,6 +10,7 @@
  */
 
 import { newArrayProto } from './array'
+import Dep from './dep'
 
 class Observer {
   constructor(data) {
@@ -47,21 +48,30 @@ export function defineReactive(target, key, value) {
   // 深度属性劫持，对所有的对象都进行属性劫持
   observe(value)
 
+  let dep = new Dep() // 每一个属性都有一个 dep
+
   // Object.defineProperty只能劫持已经存在的属性，新增属性无法劫持 （vue里面会为此单独写一些语法糖  $set $delete）
   Object.defineProperty(target, key, {
     // 取值的时候 会执行get
     get() {
+      // 保证了只有在模版渲染阶段的取值操作才会进行依赖收集
+      if (Dep.target) {
+        dep.depend() // 让当前的watcher 记住这个 dep；同时让这个属性的 dep 记住当前的 watcher
+      }
       console.log('get_v2')
       return value
     },
     // 修改的时候 会执行set
     set(newValue) {
-      console.log('set_v2')
+      // console.log('set_v2')
       if (newValue === value) return
 
       // 修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
       observe(newValue)
       value = newValue
+
+      // 通知更新
+      dep.notify()
     },
   })
 }
