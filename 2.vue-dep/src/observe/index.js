@@ -33,6 +33,7 @@ class Observer {
   // "重新定义属性"，个人理解，和proxy类似，对象和proxy返回的代理对象并不全等，其引用不同；
   // 入参属性为data[key]，使用defineProperty劫持之后，其属性变为响应式属性，和之前的普通属性断开了关联，可以理解为重新定义了属性
   // 换句话来说，data[key]仅仅是给其对应的响应式属性提供了一个默认值，无任何关联
+  // 如果不传入默认值，而是在getter、setter中访问 data[key]，则会出现栈溢出的现象   getter -> data.name -> getter -> data.name ->...无限循环
   walk(data) {
     Object.keys(data).forEach(key => defineReactive(data, key, data[key]))
   }
@@ -58,7 +59,7 @@ export function defineReactive(target, key, value) {
       if (Dep.target) {
         dep.depend() // 让当前的watcher 记住这个 dep；同时让这个属性的 dep 记住当前的 watcher
       }
-      console.log('get_v2')
+      // console.log('get_v2')
       return value
     },
     // 修改的时候 会执行set

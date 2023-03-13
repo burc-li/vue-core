@@ -9,21 +9,26 @@
   <style>
     #myPre {
       border: 4px solid #f00;
-      white-space: pre-line;
     }
-    #myPre:focus:before {
-      -webkit-user-select: text;
-      content: ' ';
+    .temp_hr {
+      display: inline-block;
+      margin: 0;
+      border: 1px solid #de5e60;
     }
-    span:focus:before {
-      -webkit-user-select: text;
-      content: ' ';
+    .temp_hr::after {
+      content: attr(data-cont);
+      text-decoration: attr(data-text);
+      text-decoration: underline line-through;
     }
-    a {
-      -webkit-user-select: text;
-      margin-left: 3px;
-      /* display: inline-block;
-      width: 70px; */
+
+    .temp_input {
+      width: 80px;
+      display: inline-block;
+      border: 1px solid #de5e60;
+      /* border: none; */
+      color: #2465ff;
+      background-color: transparent;
+      text-decoration: underline line-through;
     }
   </style>
 
@@ -31,18 +36,62 @@
     <button onclick="getValue()">获取value</button>
     <button onclick="setValue()">设置value</button>
     <button onclick="focusOrSelect()">聚焦选择</button>
+    <span>123</span>
+    <!-- <pre id="myPre" contenteditable="plaintext-only">文本123</pre> -->
+
+    <!-- 出现光标丢失问题-->
+    <!-- <pre
+      id="myPre"
+      contenteditable="plaintext-only"
+    ><span>span<span>嵌套span</span></span><a contenteditable="false" id="9r043ur49"  href="javascript:;" style="color: #f00">百度一下</a><a contenteditable="false" id="9r043ur49"  href="javascript:;" style="color: #f00">百度一下</a><span>标签内容</span></pre> -->
+
+    <!--  如果最后一个是hr标签，光标在hr标签后面。第一次的回车事件是失效的，非第一次都正常
+          如果文本中间有一个hr标签，光标在hr标签后面。回车之后，光标没有自动定位
+          记得改下样式 -->
+    <!-- <pre
+      id="myPre"
+      contenteditable="plaintext-only"
+    >我需要<hr value="开立账户" class="temp_hr" data-cont="分隔线1" />，然后<hr value="存款"   class="temp_hr" data-cont="分隔线2"/></pre> -->
+
     <pre
       id="myPre"
-      contenteditable="true"
-    >文本123<span>标签内容</span><a id="9r043ur49" contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><span>标签内容</span><a id="9r043ur49" contenteditable="false" href="javascript:;" style="color: #f00">百度一下</a><span>标签内容</span></pre>
+      contenteditable="plaintext-only"
+    >我需要<input value="开立账户" disabled class="temp_input" data-cont="分隔线1" /><input value="开立账户" disabled class="temp_input" data-cont="分隔线1" />，然后<input value="存款" disabled  class="temp_input" data-cont="分隔线2"/></pre>
 
     <script src="vue.js"></script>
     <script defer>
       const myPre = document.querySelector('#myPre')
       const list = genChildren(myPre.childNodes)
       const multiText = handleSplitArr(list)
+
+      console.log('innerText', JSON.stringify(myPre.innerText))
+      console.log('textContent', JSON.stringify(myPre.textContent))
       console.log('list', list)
       console.log('multiText', multiText)
+
+      // 获取 Selection 对象
+      function getSelection() {
+        const selection = window.getSelection()
+        const focusNode = selection?.focusNode
+        const focusOffset = selection?.focusOffset
+        const focusText = focusNode?.textContent
+        return { focusNode, focusOffset, focusText }
+      }
+      // 设置光标位置
+      function setRange(start, end) {
+        const range = document.createRange()
+        if (start) {
+          const { node, offset } = start
+          range.setStart(node, offset)
+        }
+        if (end) {
+          const { node, offset } = end
+          range.setEnd(node, offset)
+        }
+        const selection = window.getSelection()
+        selection.removeAllRanges()
+        selection.addRange(range)
+      }
 
       function handleSplitArr(list) {
         let _arr = []
@@ -112,7 +161,7 @@
         console.log('myPre', myPre.innerText)
       }
       function setValue() {
-        myPre.innerText = '文本\n123'
+        myPre.innerText = '文本\n'
       }
 
       myPre.addEventListener('click', function (e) {
