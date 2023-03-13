@@ -13,6 +13,7 @@ class Dep {
   }
   // 让watcher记住 dep
   depend() {
+    console.log('双向依赖收集')
     Dep.target.addDep(this)
   }
   // 给当前的 dep 添加 watcher
