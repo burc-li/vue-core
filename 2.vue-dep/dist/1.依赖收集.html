@@ -28,7 +28,7 @@
       // 3. mixin的实现原理
       const vm = new Vue({
         data: {
-          name: '柏成',
+          name: '柏成-',
           age: 25,
           address: {
             num: 30,
@@ -40,22 +40,29 @@
       vm.$mount('#app')
 
       // 可能有多个组件要更新
-      setTimeout(() => {
-        vm.name = 'burc'
-        vm.age = 20
-        // vm.name = 2
-        // vm.name = 10
-        // vm.name = 20
-      }, 1000)
+      // setTimeout(() => {
+      //   vm.name = 'burc-'
+      //   vm.age = 20
+      //   vm.name = 2
+      //   vm.name = 10
+      //   vm.name = 20
+      // }, 1000)
 
       // 在这里取值，不会收集 watcher，因为此时 Dep.target 已经重置为 null
       // vm.name
 
       // nextTick不是创建了一个异步任务，而是将这个任务维护到了队列中而已
+      // setTimeout(() => {
+      //   console.log(app.innerHTML) // burc-
+      // }, 0)
+      // console.log(app.innerHTML) // 柏成-
+      // vm.name = 'burc-'
 
-      // vm.$nextTick(() => {
-      //   console.log(app.innerHTML) // 同步获取
-      // })
+      vm.name = 'burc-' // 不会立即重新渲染页面
+      console.log(app.innerHTML) // 柏成-
+      vm.$nextTick(() => {
+        console.log(app.innerHTML) // burc- 同步获取
+      })
     </script>
   </body>
 </html>
