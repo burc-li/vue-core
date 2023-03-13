@@ -50,6 +50,19 @@
 
       // 在这里取值，不会收集 watcher，因为此时 Dep.target 已经重置为 null
       // vm.name
+
+      // nextTick不是创建了一个异步任务，而是将这个任务维护到了队列中而已
+      // setTimeout(() => {
+      //   console.log(app.innerHTML) // burc-
+      // }, 0)
+      // console.log(app.innerHTML) // 柏成-
+      // vm.name = 'burc-'
+
+      vm.name = 'burc-' // 不会立即重新渲染页面
+      console.log(app.innerHTML) // 柏成-
+      vm.$nextTick(() => {
+        console.log(app.innerHTML) // burc- 同步获取
+      })
     </script>
   </body>
 </html>

@@ -357,7 +357,7 @@
     queue = [];
     has = {};
     pending = false;
-    flushQueue.forEach(q => q.run()); // 在刷新的过程中可能还有新的watcher，重新放到queue中
+    flushQueue.forEach(q => q.run()); // 在刷新的过程中可能还有新的 watcher，重新放到 queue 中
   }
 
   function queueWatcher(watcher) {
@@ -365,7 +365,7 @@
     if (!has[id]) {
       queue.push(watcher);
       has[id] = true;
-      // 不管我们的update执行多少次 ，但是最终只执行一轮刷新操作
+      // 不管我们的 update 执行多少次 ，但是最终只执行一轮刷新操作
       if (!pending) {
         nextTick(flushSchedulerQueue);
         pending = true;
