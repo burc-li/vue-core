@@ -9,43 +9,42 @@
 
   <body>
     <div id="app" style="color: red; background: yellow"></div>
-    <!-- <script src="vue.js"></script> -->
-    <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.14/vue.js"></script>
+    <script src="vue.js"></script>
+    <!-- <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.14/vue.js"></script> -->
     <script>
-      // 1. Vue.options = {}  {created(){}}
+      // vue.mixin 混合 可以混入一些公共方法
+      // 1. Vue.options = { }  { created(){} }
       Vue.mixin({
         created() {
           console.log('mixin1-created')
         },
       })
-      //  2 Vue.options = {created:[fn]}  {created(){}}
+      //  2 Vue.options = { created: [fn] }  { created(){} }
       Vue.mixin({
         created() {
-          console.log('mixin1-created')
+          console.log('mixin2-created')
         },
       })
       // 发布订阅  -》  订阅
       console.log(Vue.options)
 
-      // 内部会将多个created 合并成一个队列 依次执行
+      // 内部会将多个 created 合并成一个队列 依次执行
       const vm = new Vue({
         data: {
-          name: 'zf',
-          age: 20,
+          name: '柏成-',
+          age: 25,
           address: {
             num: 30,
-            content: '回龙观',
+            content: '八里桥',
           },
           hobby: ['eat', 'drink', { a: 1 }],
         },
-        // Vue.options = {created:[fn,fn]}  {created:fn(){}}
+        // Vue.options = { created: [fn,fn] }  { created: fn(){} }
         created() {
           // 数据来源不明确
           console.log('created')
         },
       })
-
-      // vue.mixin 混合 可以混入一些公共方法
     </script>
   </body>
 </html>

@@ -1,10 +1,12 @@
 /**
  * @name 给Vue扩展初始化方法
+ * @desc mixin原理入口也写在这了
  */
 
 import { compileToFunction } from './compiler'
-import { mountComponent } from './lifecycle'
+import { mountComponent, callHook } from './lifecycle'
 import { initState } from './state'
+import { mergeOptions } from './utils'
 
 // 就是给Vue增加init方法的
 export function initMixin(Vue) {
@@ -12,10 +14,16 @@ export function initMixin(Vue) {
   Vue.prototype._init = function (options) {
     // vm.$options 就是获取用户的配置
     const vm = this
-    vm.$options = options // 将用户的选项挂载到实例上
+
+    // mixin原理 合并选项  this.constructor.options  即 构造函数上的options = Vue.options
+    vm.$options = mergeOptions(this.constructor.options, options)
+
+    callHook(vm, 'beforeCreate') // 访问不到 this.xxx
 
     // 初始化状态
     initState(vm)
+
+    callHook(vm, 'created') // 可以访问到 this.xxx
 
     if (options.el) {
       vm.$mount(options.el) // 实现数据的挂载
