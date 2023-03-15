@@ -297,13 +297,14 @@
   // 当前渲染的 watcher，静态变量，类似于全局变量，只有一份
   Dep.target = null;
 
+  /**
+   * @name Dep收集器
+   * @decs 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
+   * @decs 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
+   * @todo 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
+   * @todo 2. 调用_render() 会取值，走到 get 上
+   */
   let id = 0;
-
-  // 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
-  // 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
-
-  // 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
-  // 2. 调用_render() 会取值，走到 get 上
   class Watcher {
     constructor(vm, fn) {
       this.id = id++;
@@ -598,6 +599,7 @@
         // 对新增的内容再次进行观测
         ob.observeArray(inserted);
       }
+      ob.dep.notify(); // 通知 watcher 更新渲染
       return result;
     };
   });
@@ -614,6 +616,12 @@
    */
   class Observer {
     constructor(data) {
+      // 给每个数组/对象都增加 dep 收集功能
+      // 对于数组来说，[1, 2, [3, 4, 5], {a: 6}]，其成员中的数组和对象本身是没有被劫持过的
+      // 对于对象来说，{list: [1, 2, 3], info:{a: 4, b: 5}}，其属性中的数组和对象本身其实被劫持过了，但是必须引用改变，才可以触发setter，更新 watcher，外部无法调用这个 dep 收集器
+      // 如果想要在数组新增成员或者对象新增属性后，也可以更新 watcher，必须在给数组/对象本身增加 dep 收集器，这样就可以通过 xxx.__ob__.dep.notify() 手动触发 watcher 了
+      this.dep = new Dep();
+
       // data.__ob__ = this // 给数据加了一个标识 如果数据上有__ob__ 则说明这个属性被观测过了
       Object.defineProperty(data, '__ob__', {
         value: this,
@@ -646,9 +654,10 @@
 
   // 使用defineProperty API进行属性劫持
   function defineReactive(target, key, value) {
-    // 深度属性劫持，对所有的对象都进行属性劫持
-    observe(value);
+    // 深度属性劫持，对所有的数组/对象都进行属性劫持，childOb.dep 用来收集依赖的
+    let childOb = observe(value);
     let dep = new Dep(); // 每一个属性都有一个 dep
+    console.log('>>>>>key', key);
 
     // Object.defineProperty只能劫持已经存在的属性，新增属性无法劫持 （vue里面会为此单独写一些语法糖  $set $delete）
     Object.defineProperty(target, key, {
@@ -656,7 +665,11 @@
       get() {
         // 保证了只有在模版渲染阶段的取值操作才会进行依赖收集
         if (Dep.target) {
+          console.log('>>>>>get', key);
           dep.depend(); // 让当前的watcher 记住这个 dep；同时让这个属性的 dep 记住当前的 watcher
+          if (childOb) {
+            childOb.dep.depend(); // 让数组/对象本身也实现依赖收集，$set原理
+          }
         }
         // console.log('get_v2')
         return value;
@@ -669,7 +682,7 @@
         // 修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
         observe(newValue);
         value = newValue;
-
+        console.log('dep', dep);
         // 通知更新
         dep.notify();
       }
