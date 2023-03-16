@@ -1,5 +1,3 @@
-import { createElementVNode, createTextVNode } from './vdom'
-
 /**
  * @name 初始化元素
  * @desc 在Vue原型上扩展 render 函数相关的方法， _c _s _v _update...
@@ -7,6 +5,8 @@ import { createElementVNode, createTextVNode } from './vdom'
  * @desc 将vnode转化成真实dom 并 挂载页面
  * @desc patch既有初始化元素的功能 ，又有更新元素的功能
  */
+
+import { createElementVNode, createTextVNode } from './vdom'
 
 // 利用vnode创建真实元素
 function createElm(vnode) {

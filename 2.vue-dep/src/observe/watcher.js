@@ -1,12 +1,16 @@
+
+/**
+ * @name Watcher
+ * @decs 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
+ * @decs 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
+ * @todo 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
+ * @todo 2. 调用_render() 会取值，走到 getter 上，调用 dep.depend() 进行双向依赖收集操作
+ */
+
 import Dep from './dep'
 
 let id = 0
 
-// 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
-// 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
-
-// 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
-// 2. 调用_render() 会取值，走到 get 上
 class Watcher {
   constructor(vm, fn) {
     this.id = id++
@@ -25,7 +29,6 @@ class Watcher {
     }
   }
   get() {
-    // debugger
     Dep.target = this // Dep.target 是一个静态属性
 
     // 执行vm._render时，去vm上取 name 和 age。vm._render -> vm.$options.render.call(vm) -> with(this){} -> _s(name) -> 就会去作用域链 即this 上取 name

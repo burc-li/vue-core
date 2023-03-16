@@ -1,13 +1,14 @@
-import Watcher from "./observe/watcher";
-import { createElementVNode, createTextVNode } from './vdom'
-
 /**
  * @name 初始化元素
  * @desc 在Vue原型上扩展 render 函数相关的方法， _c _s _v _update...
  * @desc 调用render方法产生虚拟DOM，即以 VNode节点作为基础的树
  * @desc 将vnode转化成真实dom 并 挂载页面
  * @desc patch既有初始化元素的功能 ，又有更新元素的功能
+ * @desc mountComponent方法中初始化wacher实例
  */
+
+import Watcher from './observe/watcher'
+import { createElementVNode, createTextVNode } from './vdom'
 
 // 利用vnode创建真实元素
 function createElm(vnode) {
@@ -98,7 +99,7 @@ export function mountComponent(vm, el) {
 
   // true用于标识是一个渲染watcher
   const watcher = new Watcher(vm, updateComponent, true)
-  console.log('watcher',watcher)
+  console.log('watcher', watcher)
 }
 
 // vue核心流程
