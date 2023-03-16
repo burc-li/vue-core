@@ -2,7 +2,7 @@
  * @name 重写数组7个可以改变自身的方法，切片编程
  * @todo 1. Vue 的响应式是通过 Object.defineProperty() 实现的，这个 api 没办法监听数组长度的变化，也就没办法监听数组的新增。
  * @todo 2. Vue 无法检测通过数组索引改变数组的操作，这不是 Object.defineProperty() api 的原因，而是尤大认为性能消耗与带来的用户体验不成正比。对数组进行响应式检测会带来很大的性能消耗，因为数组项可能会大，比如1000条、10000条。
- * @todo 3. defineProperty无法监听数组的新增，即无法触set方法。可手动对新增内容进行观测 并 手动触发更新 - ob.dep.notify()
+ * @todo 3. defineProperty无法监听数组的新增，即无法触set方法。可手动对新增内容进行观测 并 手动触发 watcher 更新 - ob.dep.notify()
  */
 
 let oldArrayProto = Array.prototype // 获取数组的原型
