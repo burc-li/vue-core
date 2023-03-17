@@ -9,6 +9,8 @@
  * @todo 7. this 实例挂载到 data 数据上，将__ob__ 变成不可枚举，防止栈溢出【用于判断对象是否被劫持过 和 劫持变异数组新增数据】
  * @todo 8. 触发 getter 时双向依赖收集操作 dep.depend()
  * @todo 9. 触发 setter 时通知 watcher 更新 dep.notify()
+ * @todo 10. 给每个数组/对象都增加 dep 收集功能，这样就可以通过 xxx.__ob__.dep.notify() 手动触发 watcher 更新了 即 vm.$set 原理
+ * @todo 11. 递归收集
  */
 
 import { newArrayProto } from './array'
@@ -18,7 +20,7 @@ class Observer {
   constructor(data) {
     // 给每个数组/对象都增加 dep 收集功能
     // 对于数组来说，[1, 2, [3, 4, 5], {a: 6}]，其成员中的数组和对象本身是没有被劫持过的
-    // 对于对象来说，{list: [1, 2, 3], info:{a: 4, b: 5}}，其属性中的数组和对象本身其实被劫持过了，但是必须引用改变，才可以触发setter，更新 watcher，外部无法调用这个 dep 收集器
+    // 对于对象来说，{list: [1, 2, 3], info:{a: 4, b: 5}}，其属性中的数组和对象本身虽然其实被劫持过了。但是必须引用改变，才可以触发setter，更新 watcher。在外部无法调用这个 dep 收集器的相关方法去更新 watcher
     // 如果想要在数组新增成员或者对象新增属性后，也可以更新 watcher，必须在给数组/对象本身增加 dep 收集器，这样就可以通过 xxx.__ob__.dep.notify() 手动触发 watcher 了
     this.dep = new Dep()
 
@@ -52,10 +54,21 @@ class Observer {
   }
 }
 
+// 深层次嵌套会递归，递归多了性能差，不存在属性监控不到，存在的属性要重写方法  vue3-> proxy
+function dependArray(value) {
+  for (let i = 0; i < value.length; i++) {
+    let current = value[i]
+    current.__ob__ && current.__ob__.dep.depend()
+    if (Array.isArray(current)) {
+      dependArray(current)
+    }
+  }
+}
+
 // 使用defineProperty API进行属性劫持
 export function defineReactive(target, key, value) {
   // 深度属性劫持，对所有的数组/对象都进行属性劫持，childOb.dep 用来收集依赖的
-  let childOb = observe(value) 
+  let childOb = observe(value)
 
   let dep = new Dep() // 每一个属性都有一个 dep
 
@@ -69,6 +82,9 @@ export function defineReactive(target, key, value) {
         dep.depend() // 让当前的watcher 记住这个 dep；同时让这个属性的 dep 记住当前的 watcher
         if (childOb) {
           childOb.dep.depend() // 让数组/对象本身也实现依赖收集，$set原理
+          if (Array.isArray(value)) {
+            dependArray(value)
+          }
         }
       }
       return value

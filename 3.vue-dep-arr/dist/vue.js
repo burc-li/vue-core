@@ -266,14 +266,16 @@
   //                 _c('span',null))}
   //   }
 
+  /**
+   * @name Dep收集器
+   * @decs 每个响应式属性有一个 dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
+   * @decs 需要给每个响应式属性增加一个 dep， 目的就是收集watcher，当响应式数据发生变化时，更新收集的所有 watcher
+   * @todo 1. dep 和 watcher 是一个多对多的关系
+   * @todo 2. 一个属性可以在多个组件中使用 （一个 dep 对应多个 watcher）
+   * @todo 3. 一个组件中由多个属性组成 （一个 watcher 对应多个 dep）
+   */
+
   let id$1 = 0;
-
-  // 每个响应式属性有一个 dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
-  // 需要给每个响应式属性增加一个 dep， 目的就是收集watcher，当响应式数据发生变化时，更新收集的所有 watcher
-
-  // dep 和 watcher 是一个多对多的关系
-  // 一个属性可以在多个组件中使用 （一个 dep 对应多个 watcher）
-  // 一个组件中由多个属性组成 （一个 watcher 对应多个 dep）
   class Dep {
     constructor() {
       this.id = id$1++;
@@ -298,11 +300,11 @@
   Dep.target = null;
 
   /**
-   * @name Dep收集器
+   * @name Watcher
    * @decs 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
    * @decs 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
    * @todo 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
-   * @todo 2. 调用_render() 会取值，走到 get 上
+   * @todo 2. 调用_render() 会取值，走到 getter 上，调用 dep.depend() 进行双向依赖收集操作
    */
   let id = 0;
   class Watcher {
@@ -566,7 +568,7 @@
    * @name 重写数组7个可以改变自身的方法，切片编程
    * @todo 1. Vue 的响应式是通过 Object.defineProperty() 实现的，这个 api 没办法监听数组长度的变化，也就没办法监听数组的新增。
    * @todo 2. Vue 无法检测通过数组索引改变数组的操作，这不是 Object.defineProperty() api 的原因，而是尤大认为性能消耗与带来的用户体验不成正比。对数组进行响应式检测会带来很大的性能消耗，因为数组项可能会大，比如1000条、10000条。
-   * @todo 3. defineProperty无法监听数组的新增，即无法触set方法。可手动对新增内容进行观测 并 手动触发更新 - ob.dep.notify()
+   * @todo 3. defineProperty无法监听数组的新增，即无法触发set方法。可手动对新增内容进行观测 并 手动触发watcher更新 - ob.dep.notify()
    */
 
   let oldArrayProto = Array.prototype; // 获取数组的原型
@@ -599,7 +601,9 @@
         // 对新增的内容再次进行观测
         ob.observeArray(inserted);
       }
-      ob.dep.notify(); // 通知 watcher 更新渲染
+
+      // 通知 watcher 更新渲染
+      ob.dep.notify();
       return result;
     };
   });
@@ -613,12 +617,16 @@
    * @todo 5. setter方法中修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
    * @todo 6. 重写数组7个可以改变自身的方法，切片编程
    * @todo 7. this 实例挂载到 data 数据上，将__ob__ 变成不可枚举，防止栈溢出【用于判断对象是否被劫持过 和 劫持变异数组新增数据】
+   * @todo 8. 触发 getter 时双向依赖收集操作 dep.depend()
+   * @todo 9. 触发 setter 时通知 watcher 更新 dep.notify()
+   * @todo 10. 给每个数组/对象都增加 dep 收集功能，这样就可以通过 xxx.__ob__.dep.notify() 手动触发 watcher 更新了 即 vm.$set 原理
+   * @todo 11. 递归收集
    */
   class Observer {
     constructor(data) {
       // 给每个数组/对象都增加 dep 收集功能
       // 对于数组来说，[1, 2, [3, 4, 5], {a: 6}]，其成员中的数组和对象本身是没有被劫持过的
-      // 对于对象来说，{list: [1, 2, 3], info:{a: 4, b: 5}}，其属性中的数组和对象本身其实被劫持过了，但是必须引用改变，才可以触发setter，更新 watcher，外部无法调用这个 dep 收集器
+      // 对于对象来说，{list: [1, 2, 3], info:{a: 4, b: 5}}，其属性中的数组和对象本身虽然其实被劫持过了。但是必须引用改变，才可以触发setter，更新 watcher。在外部无法调用这个 dep 收集器的相关方法去更新 watcher
       // 如果想要在数组新增成员或者对象新增属性后，也可以更新 watcher，必须在给数组/对象本身增加 dep 收集器，这样就可以通过 xxx.__ob__.dep.notify() 手动触发 watcher 了
       this.dep = new Dep();
 
@@ -652,12 +660,22 @@
     }
   }
 
+  // 深层次嵌套会递归，递归多了性能差，不存在属性监控不到，存在的属性要重写方法  vue3-> proxy
+  function dependArray(value) {
+    for (let i = 0; i < value.length; i++) {
+      let current = value[i];
+      current.__ob__ && current.__ob__.dep.depend();
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
+
   // 使用defineProperty API进行属性劫持
   function defineReactive(target, key, value) {
     // 深度属性劫持，对所有的数组/对象都进行属性劫持，childOb.dep 用来收集依赖的
     let childOb = observe(value);
     let dep = new Dep(); // 每一个属性都有一个 dep
-    console.log('>>>>>key', key);
 
     // Object.defineProperty只能劫持已经存在的属性，新增属性无法劫持 （vue里面会为此单独写一些语法糖  $set $delete）
     Object.defineProperty(target, key, {
@@ -669,21 +687,22 @@
           dep.depend(); // 让当前的watcher 记住这个 dep；同时让这个属性的 dep 记住当前的 watcher
           if (childOb) {
             childOb.dep.depend(); // 让数组/对象本身也实现依赖收集，$set原理
+            if (Array.isArray(value)) {
+              dependArray(value);
+            }
           }
         }
-        // console.log('get_v2')
         return value;
       },
       // 修改的时候 会执行set
       set(newValue) {
-        // console.log('set_v2')
         if (newValue === value) return;
 
         // 修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
         observe(newValue);
         value = newValue;
         console.log('dep', dep);
-        // 通知更新
+        // 通知 watcher 更新
         dep.notify();
       }
     });
