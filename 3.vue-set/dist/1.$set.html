@@ -56,14 +56,14 @@
       //   // vm.first[3].__ob__.dep.notify() // $set原理 需要递归操作才可以更新watcher
       // }, 1000)
 
-      // 场景6：可以重新渲染，对象$set 原理
+      // 场景6：可以重新渲染，对象 $set 原理
       // vm.$set(object, propertyName, value)
       // setTimeout(() => {
       //   vm.two.count = 999
       //   vm.two.__ob__.dep.notify() // $set原理
       // }, 1000)
 
-      // 场景7：递归处理 嵌套
+      // 场景7：可以重新渲染，嵌套数组 $set 原理 递归处理
       // setTimeout(() => {
       //   vm.first[4][2].push('c')
       // }, 1000)
@@ -73,7 +73,7 @@
       //   vm.first[3].obj[3] = 888888888
       //   // vm.first.__ob__.dep.notify() // $set原理
       //   // vm.first[3].__ob__.dep.notify() // $set原理 需要递归操作才可以更新watcher
-      //   vm.first[3].obj.__ob__.dep.notify() // $set原理
+      //   // vm.first[3].obj.__ob__.dep.notify() // $set原理
       // }, 1000)
     </script>
   </body>

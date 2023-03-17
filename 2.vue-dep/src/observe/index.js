@@ -7,6 +7,7 @@
  * @todo 5. setter方法中修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
  * @todo 6. 重写数组7个可以改变自身的方法，切片编程
  * @todo 7. this 实例挂载到 data 数据上，将__ob__ 变成不可枚举，防止栈溢出【用于判断对象是否被劫持过 和 劫持变异数组新增数据】
+ * @split 依赖收集--------- 
  * @todo 8. 触发 getter 时双向依赖收集操作 dep.depend()
  * @todo 9. 触发 setter 时通知 watcher 更新 dep.notify()
  */

@@ -617,10 +617,12 @@
    * @todo 5. setter方法中修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
    * @todo 6. 重写数组7个可以改变自身的方法，切片编程
    * @todo 7. this 实例挂载到 data 数据上，将__ob__ 变成不可枚举，防止栈溢出【用于判断对象是否被劫持过 和 劫持变异数组新增数据】
+   * @split 依赖收集--------- 
    * @todo 8. 触发 getter 时双向依赖收集操作 dep.depend()
    * @todo 9. 触发 setter 时通知 watcher 更新 dep.notify()
+   * @split $set原理---------
    * @todo 10. 给每个数组/对象都增加 dep 收集功能，这样就可以通过 xxx.__ob__.dep.notify() 手动触发 watcher 更新了 即 vm.$set 原理
-   * @todo 11. 递归收集
+   * @todo 11. 递归收集，数组的话需要递归处理，因为数组中的嵌套 数组/对象 无法走到 Object.defineProperty，所以说无法被劫持
    */
   class Observer {
     constructor(data) {
@@ -660,7 +662,7 @@
     }
   }
 
-  // 深层次嵌套会递归，递归多了性能差，不存在属性监控不到，存在的属性要重写方法  vue3-> proxy
+  // 深层次嵌套会递归处理，递归多了性能就差  vue3-> proxy
   function dependArray(value) {
     for (let i = 0; i < value.length; i++) {
       let current = value[i];
@@ -688,6 +690,7 @@
           if (childOb) {
             childOb.dep.depend(); // 让数组/对象本身也实现依赖收集，$set原理
             if (Array.isArray(value)) {
+              // 数组的话需要递归处理，因为数组中的嵌套 数组/对象 无法走到 Object.defineProperty，所以说无法被劫持
               dependArray(value);
             }
           }
