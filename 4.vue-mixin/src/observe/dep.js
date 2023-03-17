@@ -8,6 +8,7 @@
  */
 
 let id = 0
+
 class Dep {
   constructor() {
     this.id = id++

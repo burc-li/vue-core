@@ -267,6 +267,160 @@
   //   }
 
   /**
+   * @name Dep收集器
+   * @decs 每个响应式属性有一个 dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
+   * @decs 需要给每个响应式属性增加一个 dep， 目的就是收集watcher，当响应式数据发生变化时，更新收集的所有 watcher
+   * @todo 1. dep 和 watcher 是一个多对多的关系
+   * @todo 2. 一个属性可以在多个组件中使用 （一个 dep 对应多个 watcher）
+   * @todo 3. 一个组件中由多个属性组成 （一个 watcher 对应多个 dep）
+   */
+
+  let id$1 = 0;
+  class Dep {
+    constructor() {
+      this.id = id$1++;
+      this.subs = []; // 这里存放着当前属性对应的 watcher
+    }
+    // 让watcher记住 dep
+    depend() {
+      console.log('双向依赖收集');
+      Dep.target.addDep(this);
+    }
+    // 给当前的 dep 添加 watcher
+    addSub(watcher) {
+      this.subs.push(watcher);
+    }
+    // 更新当前 dep 关联的所有 watcher
+    notify() {
+      this.subs.forEach(watcher => watcher.update());
+    }
+  }
+
+  // 当前渲染的 watcher，静态变量，类似于全局变量，只有一份
+  Dep.target = null;
+
+  /**
+   * @name Watcher
+   * @decs 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
+   * @decs 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
+   * @todo 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
+   * @todo 2. 调用_render() 会取值，走到 getter 上，调用 dep.depend() 进行双向依赖收集操作
+   */
+  let id = 0;
+  class Watcher {
+    constructor(vm, fn) {
+      this.id = id++;
+      this.getter = fn;
+      this.deps = []; // 用于后续我们实现计算属性，和一些清理工作
+      this.depsId = new Set();
+      this.get();
+    }
+    addDep(dep) {
+      // 一个组件 对应 多个属性 重复的属性不用记录，去重操作
+      let id = dep.id;
+      if (!this.depsId.has(id)) {
+        this.deps.push(dep);
+        this.depsId.add(id);
+        dep.addSub(this); // watcher已经记住了dep，而且已经去重了，此时让 dep 也记住 watcher
+      }
+    }
+
+    get() {
+      // debugger
+      Dep.target = this; // Dep.target 是一个静态属性
+
+      // 执行vm._render时，去vm上取 name 和 age。vm._render -> vm.$options.render.call(vm) -> with(this){} -> _s(name) -> 就会去作用域链 即this 上取 name
+      // JavaScript 查找某个未使用命名空间的变量时，会通过作用域链来查找，作用域链是跟执行代码的 context 或者包含这个变量的函数有关。'with'语句将某个对象添加到作用域链的顶部，如果在 statement 中有某个未使用命名空间的变量，跟作用域链中的某个属性同名，则这个变量将指向这个属性值
+      this.getter();
+      Dep.target = null; // 渲染完毕后就清空，保证了只有在模版渲染阶段的取值操作才会进行依赖收集
+    }
+    // // 重新渲染
+    // update() {
+    //   console.log('watcher-update')
+    //   this.get()
+    // }
+    // 重新渲染
+    update() {
+      console.log('watcher-update');
+      queueWatcher(this); // 把当前的 watcher 暂存起来
+      // this.get(); // 重新渲染
+    }
+
+    run() {
+      this.get(); // 渲染的时候用的是最新的 vm 来渲染的
+    }
+  }
+
+  /** 实现内部 watcher 异步更新 - nextTick */
+  let queue = [];
+  let has = {};
+  let pending = false; // 防抖
+  function flushSchedulerQueue() {
+    let flushQueue = queue.slice(0);
+    queue = [];
+    has = {};
+    pending = false;
+    flushQueue.forEach(q => q.run()); // 在刷新的过程中可能还有新的 watcher，重新放到 queue 中
+  }
+
+  function queueWatcher(watcher) {
+    const id = watcher.id;
+    if (!has[id]) {
+      queue.push(watcher);
+      has[id] = true;
+      // 不管我们的 update 执行多少次 ，但是最终只执行一轮刷新操作
+      if (!pending) {
+        nextTick(flushSchedulerQueue);
+        pending = true;
+      }
+    }
+  }
+
+  /** 实现暴露给用户API回调的异步更新 - nextTick */
+  let callbacks = []; // 存储 nextTick 回调
+  let waiting = false; // 防抖
+  function flushCallbacks() {
+    let cbs = callbacks.slice(0);
+    waiting = false;
+    callbacks = [];
+    cbs.forEach(cb => cb()); // 按照顺序依次执行
+  }
+  // vue2中 nextTick 没有直接使用某个api 而是采用优雅降级的方式
+  // 内部先采用的是 promise(IE不兼容，微任务)  MutationObserver(H5的api，微任务)  setImmediate(IE专享，宏任务)  setTimeout（宏任务)
+  // let timerFunc;
+  // if (Promise) {
+  //     timerFunc = () => {
+  //         Promise.resolve().then(flushCallbacks)
+  //     }
+  // }else if(MutationObserver){
+  //     let observer = new MutationObserver(flushCallbacks); // 这里传入的回调是异步执行的
+  //     let textNode = document.createTextNode(1);
+  //     observer.observe(textNode,{
+  //         characterData:true
+  //     });
+  //     timerFunc = () => {
+  //         textNode.textContent = 2;
+  //     }
+  // }else if(setImmediate){
+  //     timerFunc = () => {
+  //        setImmediate(flushCallbacks);
+  //     }
+  // }else{
+  //     timerFunc = () => {
+  //         setTimeout(flushCallbacks);
+  //      }
+  // }
+  function nextTick(cb) {
+    // 先内部还是先用户的？按照顺序依次执行
+    callbacks.push(cb); // 维护 nextTick 中的 cakllback 方法
+    if (!waiting) {
+      // timerFunc()
+      Promise.resolve().then(flushCallbacks);
+      waiting = true;
+    }
+  }
+
+  /**
    * @name 虚拟DOM相关方法
    */
 
@@ -306,7 +460,9 @@
    * @desc 在Vue原型上扩展 render 函数相关的方法， _c _s _v _update...
    * @desc 调用render方法产生虚拟DOM，即以 VNode节点作为基础的树
    * @desc 将vnode转化成真实dom 并 挂载页面
-   * @desc patch既有初始化元素的功能 ，又有更新元素的功能
+   * @todo patch 既有初始化元素的功能 ，又有更新元素的功能
+   * @todo mountComponent 方法内实例化一个渲染 watcher，并立即执行其回调
+   * @todo callHook 调用生命周期钩子函数
    */
 
   // 利用vnode创建真实元素
@@ -335,7 +491,6 @@
       if (key === 'style') {
         // { color: 'red', "background": 'yellow' }
         for (let styleName in props.style) {
-          console.log(styleName, props.style[styleName]);
           el.style[styleName] = props.style[styleName];
         }
       } else {
@@ -351,7 +506,7 @@
       const elm = oldVNode; // 获取真实元素
       const parentElm = elm.parentNode; // 拿到父元素
       let newElm = createElm(vnode);
-      console.log('利用vnode创建真实元素', newElm, parentElm);
+      console.log('利用vnode创建真实元素\n', newElm, parentElm);
       parentElm.insertBefore(newElm, elm.nextSibling);
       parentElm.removeChild(elm); // 删除老节点
 
@@ -393,15 +548,15 @@
   function mountComponent(vm, el) {
     // 这里的el 是通过querySelector获取的
     vm.$el = el;
+    const updateComponent = () => {
+      // vm._render 创建虚拟DOM
+      // vm._update 把 VNode 渲染成真实的DOM
+      vm._update(vm._render());
+    };
 
-    // 1.调用render方法产生虚拟节点，即虚拟DOM
-    const vnode = vm._render(); // 内部调用 vm.$options.render()
-    console.log('虚拟节点vnode', vnode);
-
-    // 2.根据虚拟DOM产生真实DOM
-    vm._update(vnode);
-
-    // 3.插入到el元素中
+    // true用于标识是一个渲染watcher
+    const watcher = new Watcher(vm, updateComponent, true);
+    console.log('watcher', watcher);
   }
 
   // vue核心流程
@@ -411,11 +566,19 @@
   // 4） 利用render函数去创建 虚拟DOM（使用响应式数据）
   // 5） 根据生成的虚拟节点创造真实的DOM
 
+  // 调用生命周期钩子函数
+  function callHook(vm, hook) {
+    const handlers = vm.$options[hook];
+    if (handlers) {
+      handlers.forEach(handler => handler.call(vm));
+    }
+  }
+
   /**
    * @name 重写数组7个可以改变自身的方法，切片编程
    * @todo 1. Vue 的响应式是通过 Object.defineProperty() 实现的，这个 api 没办法监听数组长度的变化，也就没办法监听数组的新增。
    * @todo 2. Vue 无法检测通过数组索引改变数组的操作，这不是 Object.defineProperty() api 的原因，而是尤大认为性能消耗与带来的用户体验不成正比。对数组进行响应式检测会带来很大的性能消耗，因为数组项可能会大，比如1000条、10000条。
-   * @todo 3. defineProperty无法监听数组的新增，即无法触set方法。可手动对新增内容进行观测 并 手动触发更新 - ob.dep.notify()
+   * @todo 3. defineProperty无法监听数组的新增，即无法触发set方法。可手动对新增内容进行观测 并 手动触发watcher更新 - ob.dep.notify()
    */
 
   let oldArrayProto = Array.prototype; // 获取数组的原型
@@ -448,6 +611,9 @@
         // 对新增的内容再次进行观测
         ob.observeArray(inserted);
       }
+
+      // 通知 watcher 更新渲染
+      ob.dep.notify();
       return result;
     };
   });
@@ -461,9 +627,21 @@
    * @todo 5. setter方法中修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
    * @todo 6. 重写数组7个可以改变自身的方法，切片编程
    * @todo 7. this 实例挂载到 data 数据上，将__ob__ 变成不可枚举，防止栈溢出【用于判断对象是否被劫持过 和 劫持变异数组新增数据】
+   * @split 依赖收集--------- 
+   * @todo 8. 触发 getter 时双向依赖收集操作 dep.depend()
+   * @todo 9. 触发 setter 时通知 watcher 更新 dep.notify()
+   * @split $set原理---------
+   * @todo 10. 给每个数组/对象都增加 dep 收集功能，这样就可以通过 xxx.__ob__.dep.notify() 手动触发 watcher 更新了 即 vm.$set 原理
+   * @todo 11. 递归收集，数组的话需要递归处理，因为数组中的嵌套 数组/对象 无法走到 Object.defineProperty，所以说无法被劫持
    */
   class Observer {
     constructor(data) {
+      // 给每个数组/对象都增加 dep 收集功能
+      // 对于数组来说，[1, 2, [3, 4, 5], {a: 6}]，其成员中的数组和对象本身是没有被劫持过的
+      // 对于对象来说，{list: [1, 2, 3], info:{a: 4, b: 5}}，其属性中的数组和对象本身虽然其实被劫持过了。但是必须引用改变，才可以触发setter，更新 watcher。在外部无法调用这个 dep 收集器的相关方法去更新 watcher
+      // 如果想要在数组新增成员或者对象新增属性后，也可以更新 watcher，必须在给数组/对象本身增加 dep 收集器，这样就可以通过 xxx.__ob__.dep.notify() 手动触发 watcher 了
+      this.dep = new Dep();
+
       // data.__ob__ = this // 给数据加了一个标识 如果数据上有__ob__ 则说明这个属性被观测过了
       Object.defineProperty(data, '__ob__', {
         value: this,
@@ -494,26 +672,51 @@
     }
   }
 
+  // 深层次嵌套会递归处理，递归多了性能就差  vue3-> proxy
+  function dependArray(value) {
+    for (let i = 0; i < value.length; i++) {
+      let current = value[i];
+      current.__ob__ && current.__ob__.dep.depend();
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
+
   // 使用defineProperty API进行属性劫持
   function defineReactive(target, key, value) {
-    // 深度属性劫持，对所有的对象都进行属性劫持
-    observe(value);
+    // 深度属性劫持，对所有的数组/对象都进行属性劫持，childOb.dep 用来收集依赖的
+    let childOb = observe(value);
+    let dep = new Dep(); // 每一个属性都有一个 dep
 
     // Object.defineProperty只能劫持已经存在的属性，新增属性无法劫持 （vue里面会为此单独写一些语法糖  $set $delete）
     Object.defineProperty(target, key, {
       // 取值的时候 会执行get
       get() {
-        console.log('get_v2');
+        // 保证了只有在模版渲染阶段的取值操作才会进行依赖收集
+        if (Dep.target) {
+          console.log('>>>>>get', key);
+          dep.depend(); // 让当前的watcher 记住这个 dep；同时让这个属性的 dep 记住当前的 watcher
+          if (childOb) {
+            childOb.dep.depend(); // 让数组/对象本身也实现依赖收集，$set原理
+            if (Array.isArray(value)) {
+              // 数组的话需要递归处理，因为数组中的嵌套 数组/对象 无法走到 Object.defineProperty，所以说无法被劫持
+              dependArray(value);
+            }
+          }
+        }
         return value;
       },
       // 修改的时候 会执行set
       set(newValue) {
-        console.log('set_v2');
         if (newValue === value) return;
 
         // 修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
         observe(newValue);
         value = newValue;
+        console.log('dep', dep);
+        // 通知 watcher 更新
+        dep.notify();
       }
     });
   }
@@ -576,6 +779,57 @@
   }
 
   /**
+   * @name 工具类方法
+   * @decs 重点关注下 策略模式 的应用，可以大大减少 if else 代码量
+   */
+
+  const strats = {};
+  const LIFECYCLE = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed'];
+  LIFECYCLE.forEach(hook => {
+    strats[hook] = function (p, c) {
+      // 第一次 { } { created: function(){} }   => { created: [fn] }
+      // 第二次 { created: [fn] }  { created: function(){} } => { created: [fn,fn] }
+      // 第三次 { created: [fn,fn] }  { } => { created: [fn,fn] }
+      if (c) {
+        if (p) {
+          // 如果儿子有，父亲有
+          return p.concat(c);
+        } else {
+          // 儿子有，父亲没有，则将儿子包装成数组
+          return [c];
+        }
+      } else {
+        return p; // 如果儿子没有，则用父亲即可
+      }
+    };
+  });
+
+  // 合并选项
+  function mergeOptions(parent, child) {
+    const options = {};
+    // 循环老的options { }
+    for (let key in parent) {
+      mergeField(key);
+    }
+    // 循环新的options { created: function(){} }
+    for (let key in child) {
+      if (!parent.hasOwnProperty(key)) {
+        mergeField(key);
+      }
+    }
+    function mergeField(key) {
+      // 策略模式 用策略模式减少if /else
+      if (strats[key]) {
+        options[key] = strats[key](parent[key], child[key]);
+      } else {
+        // 如果不在策略中则以儿子为主
+        options[key] = child[key] || parent[key];
+      }
+    }
+    return options;
+  }
+
+  /**
    * @name 给Vue扩展初始化方法
    */
 
@@ -585,10 +839,14 @@
     Vue.prototype._init = function (options) {
       // vm.$options 就是获取用户的配置
       const vm = this;
-      vm.$options = options; // 将用户的选项挂载到实例上
+      // mixin原理 将合并后的选项挂载到vm实例上    this.constructor.options  即 构造函数上的options = Vue.options
+      vm.$options = mergeOptions(this.constructor.options, options);
+      callHook(vm, 'beforeCreate'); // 访问不到 this.xxx
 
       // 初始化状态
       initState(vm);
+      callHook(vm, 'created'); // 可以访问到 this.xxx
+
       if (options.el) {
         vm.$mount(options.el); // 实现数据的挂载
       }
@@ -623,17 +881,34 @@
   }
 
   /**
+   * @name 全局API
+   */
+  function initGlobalAPI(Vue) {
+    // 静态属性
+    Vue.options = {};
+    // 静态方法
+    Vue.mixin = function (mixin) {
+      // 将 全局的options 和 用户的选项 进行合并
+      this.options = mergeOptions(this.options, mixin);
+      return this;
+    };
+  }
+
+  /**
    * @name 实现Vue构造函数
    */
 
   // 通过构造函数扩展方法
   function Vue(options) {
-    // options就是用户的选项
     this._init(options); // 默认就调用了init
   }
 
-  initMixin(Vue); // 在Vue原型上扩展init方法
-  initLifeCycle(Vue); // 在Vue原型上扩展 render 函数相关的方法
+  Vue.prototype.$nextTick = nextTick; // 把 nextTick 挂载到vue原型上，方便用户在实例上使用
+
+  initMixin(Vue); // 在Vue原型上扩展init方法  Vue.prototype._init  Vue.prototype.$mount
+  initLifeCycle(Vue); // 在Vue原型上扩展 render 函数相关的方法   Vue.prototype._render   Vue.prototype._update
+
+  initGlobalAPI(Vue); // 在Vue上扩展全局属性和方法 Vue.options Vue.mixin
 
   return Vue;
 

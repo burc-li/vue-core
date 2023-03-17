@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <!-- 会调用 JSON.stringfy()，会对数组中的对象属性依次进行取值 -->
+    <!-- _render -> _v(_s(arr)) -->
+    <div id="app">
+      <p>{{first}}</p>
+      <p>{{two}}</p>
+    </div>
+    <script src="vue.js"></script>
+    <!-- <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.14/vue.js"></script> -->
+    <script>
+      const vm = new Vue({
+        el: '#app',
+        data: {
+          first: [1, 2, 3, { num: 4, obj: [1, 2, 3] }, [5, 6, [], { digit: 8 }]], // 给数组本身增加 dep，如果数组新增了某一项，我可以触发dep更新
+          two: { name: 1 }, // 给对象也增加dep，如果后续用户增添了属性，我可以触发dep更新
+        },
+      })
+
+      // vm.first[0] = 100 // 通过索引修改数组成员，无法检测，因为只重写了7个数组方法
+      // vm.first.length = 100 // 无法监控数组长度的变化
+
+      // 场景1：可以重新渲染，first 已被劫持
+      // setTimeout(() => {
+      //   vm.first = [111, 2222, 3333, { num: 4 }]
+      // }, 1000)
+
+      // 场景2：可以重新渲染，对象中已存在的属性已被劫持过了
+      // setTimeout(() => {
+      //   vm.first[3].num = 999
+      // }, 1000)
+
+      // 场景3：可以重新渲染，对数组 7个 方法已重新，会通知watcher更新
+      // setTimeout(() => {
+      //   vm.first.push(100, 100, 100)
+      // }, 1000)
+
+      // 场景4：不可以重新渲染，对象中的新增属性并没有进行数据劫持
+      // setTimeout(() => {b
+      //   vm.first[3].count = 999
+      // }, 1000)
+
+      // 场景5：可以重新渲染，数组 $set 原理
+      // vm.$set(object, indexOfItem, value)
+      // setTimeout(() => {
+      //   vm.first[3].count = 999
+      //   vm.first.__ob__.dep.notify() // $set原理
+      //   // vm.first[3].__ob__.dep.notify() // $set原理 需要递归操作才可以更新watcher
+      // }, 1000)
+
+      // 场景6：可以重新渲染，对象 $set 原理
+      // vm.$set(object, propertyName, value)
+      // setTimeout(() => {
+      //   vm.two.count = 999
+      //   vm.two.__ob__.dep.notify() // $set原理
+      // }, 1000)
+
+      // 场景7：可以重新渲染，嵌套数组 $set 原理 递归处理
+      // setTimeout(() => {
+      //   vm.first[4][2].push('c')
+      // }, 1000)
+
+      // 场景8：递归处理 嵌套
+      // setTimeout(() => {
+      //   vm.first[3].obj[3] = 888888888
+      //   // vm.first.__ob__.dep.notify() // $set原理
+      //   // vm.first[3].__ob__.dep.notify() // $set原理 需要递归操作才可以更新watcher
+      //   // vm.first[3].obj.__ob__.dep.notify() // $set原理
+      // }, 1000)
+    </script>
+  </body>
+</html>

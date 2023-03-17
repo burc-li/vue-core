@@ -3,9 +3,11 @@
  * @desc 在Vue原型上扩展 render 函数相关的方法， _c _s _v _update...
  * @desc 调用render方法产生虚拟DOM，即以 VNode节点作为基础的树
  * @desc 将vnode转化成真实dom 并 挂载页面
- * @desc patch既有初始化元素的功能 ，又有更新元素的功能
+ * @todo patch 既有初始化元素的功能 ，又有更新元素的功能
+ * @todo mountComponent 方法内实例化一个渲染 watcher，并立即执行其回调
+ * @todo callHook 调用生命周期钩子函数
  */
-
+import Watcher from "./observe/watcher";
 import { createElementVNode, createTextVNode } from './vdom'
 
 // 利用vnode创建真实元素
@@ -29,7 +31,6 @@ function patchProps(el, props) {
     if (key === 'style') {
       // { color: 'red', "background": 'yellow' }
       for (let styleName in props.style) {
-        console.log(styleName, props.style[styleName])
         el.style[styleName] = props.style[styleName]
       }
     } else {
@@ -45,7 +46,7 @@ function patch(oldVNode, vnode) {
     const elm = oldVNode // 获取真实元素
     const parentElm = elm.parentNode // 拿到父元素
     let newElm = createElm(vnode)
-    console.log('利用vnode创建真实元素', newElm, parentElm)
+    console.log('利用vnode创建真实元素\n', newElm, parentElm)
 
     parentElm.insertBefore(newElm, elm.nextSibling)
     parentElm.removeChild(elm) // 删除老节点
@@ -90,14 +91,15 @@ export function mountComponent(vm, el) {
   // 这里的el 是通过querySelector获取的
   vm.$el = el
 
-  // 1.调用render方法产生虚拟节点，即虚拟DOM
-  const vnode = vm._render() // 内部调用 vm.$options.render()
-  console.log('虚拟节点vnode', vnode)
+  const updateComponent = () => {
+    // vm._render 创建虚拟DOM
+    // vm._update 把 VNode 渲染成真实的DOM
+    vm._update(vm._render())
+  }
 
-  // 2.根据虚拟DOM产生真实DOM
-  vm._update(vnode)
-
-  // 3.插入到el元素中
+  // true用于标识是一个渲染watcher
+  const watcher = new Watcher(vm, updateComponent, true)
+  console.log('watcher',watcher)
 }
 
 // vue核心流程
@@ -106,3 +108,12 @@ export function mountComponent(vm, el) {
 // 3)  将ast语法树 转换成 指定格式的render函数字符串，利用模版引擎再次转换成 render函数，后续每次数据更新可以只执行render函数 (无需再次执行ast转化的过程)
 // 4） 利用render函数去创建 虚拟DOM（使用响应式数据）
 // 5） 根据生成的虚拟节点创造真实的DOM
+
+// 调用生命周期钩子函数
+export function callHook(vm, hook) {
+  const handlers = vm.$options[hook]
+  if (handlers) {
+    handlers.forEach(handler => handler.call(vm))
+  }
+}
+

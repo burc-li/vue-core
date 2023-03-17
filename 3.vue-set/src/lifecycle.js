@@ -6,6 +6,7 @@
  * @desc patch既有初始化元素的功能 ，又有更新元素的功能
  */
 
+import Watcher from "./observe/watcher";
 import { createElementVNode, createTextVNode } from './vdom'
 
 // 利用vnode创建真实元素
@@ -29,7 +30,6 @@ function patchProps(el, props) {
     if (key === 'style') {
       // { color: 'red', "background": 'yellow' }
       for (let styleName in props.style) {
-        console.log(styleName, props.style[styleName])
         el.style[styleName] = props.style[styleName]
       }
     } else {
@@ -45,7 +45,7 @@ function patch(oldVNode, vnode) {
     const elm = oldVNode // 获取真实元素
     const parentElm = elm.parentNode // 拿到父元素
     let newElm = createElm(vnode)
-    console.log('利用vnode创建真实元素', newElm, parentElm)
+    console.log('利用vnode创建真实元素\n', newElm, parentElm)
 
     parentElm.insertBefore(newElm, elm.nextSibling)
     parentElm.removeChild(elm) // 删除老节点
@@ -90,14 +90,15 @@ export function mountComponent(vm, el) {
   // 这里的el 是通过querySelector获取的
   vm.$el = el
 
-  // 1.调用render方法产生虚拟节点，即虚拟DOM
-  const vnode = vm._render() // 内部调用 vm.$options.render()
-  console.log('虚拟节点vnode', vnode)
+  const updateComponent = () => {
+    // vm._render 创建虚拟DOM
+    // vm._update 把 VNode 渲染成真实的DOM
+    vm._update(vm._render())
+  }
 
-  // 2.根据虚拟DOM产生真实DOM
-  vm._update(vnode)
-
-  // 3.插入到el元素中
+  // true用于标识是一个渲染watcher
+  const watcher = new Watcher(vm, updateComponent, true)
+  console.log('watcher',watcher)
 }
 
 // vue核心流程

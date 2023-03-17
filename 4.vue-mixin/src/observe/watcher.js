@@ -1,4 +1,3 @@
-
 /**
  * @name Watcher
  * @decs 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
@@ -29,6 +28,7 @@ class Watcher {
     }
   }
   get() {
+    // debugger
     Dep.target = this // Dep.target 是一个静态属性
 
     // 执行vm._render时，去vm上取 name 和 age。vm._render -> vm.$options.render.call(vm) -> with(this){} -> _s(name) -> 就会去作用域链 即this 上取 name

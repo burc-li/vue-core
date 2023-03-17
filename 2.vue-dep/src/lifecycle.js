@@ -4,6 +4,7 @@
  * @desc 调用render方法产生虚拟DOM，即以 VNode节点作为基础的树
  * @desc 将vnode转化成真实dom 并 挂载页面
  * @desc patch既有初始化元素的功能 ，又有更新元素的功能
+ * @desc mountComponent方法中初始化wacher实例
  */
 
 import Watcher from './observe/watcher'
