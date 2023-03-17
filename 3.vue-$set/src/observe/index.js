@@ -61,7 +61,7 @@ function dependArray(value) {
     current.__ob__ && current.__ob__.dep.depend()
     if (Array.isArray(current)) {
       dependArray(current)
-    }
+    } 
   }
 }
 
