@@ -25,6 +25,32 @@
         },
       })
 
+      // 如果通过数组索引改变成员后，直接调用 xxx.__ob__.dep.notify()的话，那么这个新增属性是没有被劫持过的，后面我们直接修改 这个xxx内容好像还是不会触发setter，不会重新渲染页面
+      // 但是！！！ $set 内部使用的是，通过 splice 间接调用 xxx.__ob__.dep.notify()，使用splice还有个好处，就是可以对新增内容重新劫持观测
+      // setTimeout(() => {
+      //   vm.$set(vm.first, 3, { name: '111111' })
+      //   // 原理
+      //   vm.first.splice(3, 1, { name: '111111' })
+
+      //   setTimeout(() => {
+      //     vm.first[3].name = '999999'
+      //   }, 1000)
+      // }, 1000)
+
+      // 如果新增对象属性后，直接调用 xxx.__ob__.dep.notify()的话，那么这个新增属性是没有被劫持过的，后面我们直接修改这个xxx内容好像还是不会触发setter，不会重新渲染页面
+      // 但是！！！$set 内部使用的是，先劫持观测 defineReactive(target, key, value)，在调用 xxx.__ob__.dep.notify()
+      setTimeout(() => {
+        // vm.$set(vm.first[3], 'a', '111111')
+        // 原理
+        vm.first[3].a = '111111'
+        // defineReactive(target, key, value) 重新观测，目前这个方法没导出，无法测试
+        vm.first[3].__ob__.dep.notify()
+
+        setTimeout(() => {
+          vm.first[3].a = '999999'
+        }, 1000)
+      }, 1000)
+
       // vm.first[0] = 100 // 通过索引修改数组成员，无法检测，因为只重写了7个数组方法
       // vm.first.length = 100 // 无法监控数组长度的变化
 
