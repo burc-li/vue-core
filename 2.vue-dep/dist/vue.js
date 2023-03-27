@@ -266,29 +266,32 @@
   //                 _c('span',null))}
   //   }
 
+  /**
+   * @name Dep收集器
+   * @decs 每个响应式属性有一个 dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
+   * @decs 需要给每个响应式属性增加一个 dep， 目的就是收集watcher，当响应式数据发生变化时，更新收集的所有 watcher
+   * @todo 1. dep 和 watcher 是一个多对多的关系
+   * @todo 2. 一个属性可以在多个组件中使用 （一个 dep 对应多个 watcher）
+   * @todo 3. 一个组件中由多个属性组成 （一个 watcher 对应多个 dep）
+   */
+
   let id$1 = 0;
-
-  // 每个响应式属性有一个 dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
-  // 需要给每个响应式属性增加一个 dep， 目的就是收集watcher，当响应式数据发生变化时，更新收集的所有 watcher
-
-  // dep 和 watcher 是一个多对多的关系
-  // 一个属性可以在多个组件中使用 （一个 dep 对应多个 watcher）
-  // 一个组件中由多个属性组成 （一个 watcher 对应多个 dep）
   class Dep {
     constructor() {
       this.id = id$1++;
-      this.subs = []; // 这里存放着当前属性对应的 watcher
+      // 依赖收集，收集当前属性对应的观察者 watcher
+      this.subs = [];
     }
-    // 让watcher记住 dep
+    // 通知 watcher 收集 dep
     depend() {
       console.log('双向依赖收集');
       Dep.target.addDep(this);
     }
-    // 给当前的 dep 添加 watcher
+    // 让当前的 dep收集 watcher
     addSub(watcher) {
       this.subs.push(watcher);
     }
-    // 更新当前 dep 关联的所有 watcher
+    // 通知当前 dep关联的所有 watcher 去更新
     notify() {
       this.subs.forEach(watcher => watcher.update());
     }
@@ -297,54 +300,48 @@
   // 当前渲染的 watcher，静态变量，类似于全局变量，只有一份
   Dep.target = null;
 
-  let id = 0;
+  /** 实现暴露给用户API回调的异步更新 - nextTick */
+  let callbacks = []; // 存储 nextTick 回调
+  let waiting = false; // 防抖
 
-  // 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
-  // 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
+  function flushCallbacks() {
+    let cbs = callbacks.slice(0);
+    waiting = false;
+    callbacks = [];
+    cbs.forEach(cb => cb()); // 按照顺序依次执行
+  }
 
-  // 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
-  // 2. 调用_render() 会取值，走到 get 上
-  class Watcher {
-    constructor(vm, fn) {
-      this.id = id++;
-      this.getter = fn;
-      this.deps = []; // 用于后续我们实现计算属性，和一些清理工作
-      this.depsId = new Set();
-      this.get();
-    }
-    addDep(dep) {
-      // 一个组件 对应 多个属性 重复的属性不用记录，去重操作
-      let id = dep.id;
-      if (!this.depsId.has(id)) {
-        this.deps.push(dep);
-        this.depsId.add(id);
-        dep.addSub(this); // watcher已经记住了dep，而且已经去重了，此时让 dep 也记住 watcher
-      }
-    }
-
-    get() {
-      // debugger
-      Dep.target = this; // Dep.target 是一个静态属性
-
-      // 执行vm._render时，去vm上取 name 和 age。vm._render -> vm.$options.render.call(vm) -> with(this){} -> _s(name) -> 就会去作用域链 即this 上取 name
-      // JavaScript 查找某个未使用命名空间的变量时，会通过作用域链来查找，作用域链是跟执行代码的 context 或者包含这个变量的函数有关。'with'语句将某个对象添加到作用域链的顶部，如果在 statement 中有某个未使用命名空间的变量，跟作用域链中的某个属性同名，则这个变量将指向这个属性值
-      this.getter();
-      Dep.target = null; // 渲染完毕后就清空，保证了只有在模版渲染阶段的取值操作才会进行依赖收集
-    }
-    // // 重新渲染
-    // update() {
-    //   console.log('watcher-update')
-    //   this.get()
-    // }
-    // 重新渲染
-    update() {
-      console.log('watcher-update');
-      queueWatcher(this); // 把当前的 watcher 暂存起来
-      // this.get(); // 重新渲染
-    }
-
-    run() {
-      this.get(); // 渲染的时候用的是最新的 vm 来渲染的
+  // vue2中 nextTick 没有直接使用某个api 而是采用优雅降级的方式
+  // 内部先采用的是 promise(IE不兼容，微任务)  MutationObserver(H5的api，微任务)  setImmediate(IE专享，宏任务)  setTimeout（宏任务)
+  let timerFunc;
+  if (Promise) {
+    timerFunc = () => {
+      Promise.resolve().then(flushCallbacks);
+    };
+  } else if (MutationObserver) {
+    let observer = new MutationObserver(flushCallbacks); // 这里传入的回调是异步执行的
+    let textNode = document.createTextNode(1);
+    observer.observe(textNode, {
+      characterData: true
+    });
+    timerFunc = () => {
+      textNode.textContent = 2;
+    };
+  } else if (setImmediate) {
+    timerFunc = () => {
+      setImmediate(flushCallbacks);
+    };
+  } else {
+    timerFunc = () => {
+      setTimeout(flushCallbacks);
+    };
+  }
+  function nextTick(cb) {
+    // 先内部还是先用户的？按照顺序依次执行
+    callbacks.push(cb); // 维护 nextTick 中的 cakllback 方法
+    if (!waiting) {
+      timerFunc();
+      waiting = true;
     }
   }
 
@@ -352,6 +349,7 @@
   let queue = [];
   let has = {};
   let pending = false; // 防抖
+
   function flushSchedulerQueue() {
     let flushQueue = queue.slice(0);
     queue = [];
@@ -373,47 +371,54 @@
     }
   }
 
-  /** 实现暴露给用户API回调的异步更新 - nextTick */
-  let callbacks = []; // 存储 nextTick 回调
-  let waiting = false; // 防抖
-  function flushCallbacks() {
-    let cbs = callbacks.slice(0);
-    waiting = false;
-    callbacks = [];
-    cbs.forEach(cb => cb()); // 按照顺序依次执行
-  }
-  // vue2中 nextTick 没有直接使用某个api 而是采用优雅降级的方式
-  // 内部先采用的是 promise(IE不兼容，微任务)  MutationObserver(H5的api，微任务)  setImmediate(IE专享，宏任务)  setTimeout（宏任务)
-  // let timerFunc;
-  // if (Promise) {
-  //     timerFunc = () => {
-  //         Promise.resolve().then(flushCallbacks)
-  //     }
-  // }else if(MutationObserver){
-  //     let observer = new MutationObserver(flushCallbacks); // 这里传入的回调是异步执行的
-  //     let textNode = document.createTextNode(1);
-  //     observer.observe(textNode,{
-  //         characterData:true
-  //     });
-  //     timerFunc = () => {
-  //         textNode.textContent = 2;
-  //     }
-  // }else if(setImmediate){
-  //     timerFunc = () => {
-  //        setImmediate(flushCallbacks);
-  //     }
-  // }else{
-  //     timerFunc = () => {
-  //         setTimeout(flushCallbacks);
-  //      }
-  // }
-  function nextTick(cb) {
-    // 先内部还是先用户的？按照顺序依次执行
-    callbacks.push(cb); // 维护 nextTick 中的 cakllback 方法
-    if (!waiting) {
-      // timerFunc()
-      Promise.resolve().then(flushCallbacks);
-      waiting = true;
+  /**
+   * @name Watcher
+   * @decs 每个响应式属性有一个dep 收集器（属性就是被观察者，watcher就是观察者），属性变化了会通知观察者来更新 -》 这就是我们的观察者模式
+   * @decs 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
+   * @todo 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
+   * @todo 2. 调用_render() 会取值，走到 getter 上，调用 dep.depend() 进行双向依赖收集操作
+   */
+  let id = 0;
+  class Watcher {
+    constructor(vm, fn) {
+      this.id = id++;
+      this.getter = fn;
+      this.deps = []; // 用于后续我们实现计算属性，和一些清理工作
+      this.depsId = new Set();
+      this.get();
+    }
+    addDep(dep) {
+      // 一个组件 对应 多个属性 重复的属性不用记录，去重操作
+      let id = dep.id;
+      if (!this.depsId.has(id)) {
+        this.deps.push(dep);
+        this.depsId.add(id);
+        dep.addSub(this); // watcher已经记住了dep，而且已经去重了，此时让 dep 也记住 watcher
+      }
+    }
+
+    get() {
+      Dep.target = this; // Dep.target 是一个静态属性
+
+      // 执行vm._render时，去vm上取 name 和 age。vm._render -> vm.$options.render.call(vm) -> with(this){} -> _s(name) -> 就会去作用域链 即this 上取 name
+      // JavaScript 查找某个未使用命名空间的变量时，会通过作用域链来查找，作用域链是跟执行代码的 context 或者包含这个变量的函数有关。'with'语句将某个对象添加到作用域链的顶部，如果在 statement 中有某个未使用命名空间的变量，跟作用域链中的某个属性同名，则这个变量将指向这个属性值
+      this.getter();
+      Dep.target = null; // 渲染完毕后就清空，保证了只有在模版渲染阶段的取值操作才会进行依赖收集
+    }
+    // // 重新渲染
+    // update() {
+    //   console.log('watcher-update')
+    //   this.get()
+    // }
+    // 重新渲染
+    update() {
+      console.log('watcher-update');
+      queueWatcher(this); // 把当前的 watcher 暂存起来
+      // this.get(); // 重新渲染
+    }
+
+    run() {
+      this.get(); // 渲染的时候用的是最新的 vm 来渲染的
     }
   }
 
@@ -458,6 +463,7 @@
    * @desc 调用render方法产生虚拟DOM，即以 VNode节点作为基础的树
    * @desc 将vnode转化成真实dom 并 挂载页面
    * @desc patch既有初始化元素的功能 ，又有更新元素的功能
+   * @desc mountComponent方法中初始化wacher实例
    */
 
   // 利用vnode创建真实元素
@@ -611,6 +617,9 @@
    * @todo 5. setter方法中修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
    * @todo 6. 重写数组7个可以改变自身的方法，切片编程
    * @todo 7. this 实例挂载到 data 数据上，将__ob__ 变成不可枚举，防止栈溢出【用于判断对象是否被劫持过 和 劫持变异数组新增数据】
+   * @split 依赖收集--------- 
+   * @todo 8. 触发 getter 时双向依赖收集操作 dep.depend()
+   * @todo 9. 触发 setter 时通知 watcher 更新 dep.notify()
    */
   class Observer {
     constructor(data) {
