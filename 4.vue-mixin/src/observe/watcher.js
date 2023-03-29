@@ -7,6 +7,7 @@
  */
 
 import Dep from './dep'
+import { queueWatcher } from './scheduler'
 
 let id = 0
 
@@ -50,74 +51,6 @@ class Watcher {
   }
   run() {
     this.get() // 渲染的时候用的是最新的 vm 来渲染的
-  }
-}
-
-/** 实现内部 watcher 异步更新 - nextTick */
-let queue = []
-let has = {}
-let pending = false // 防抖
-function flushSchedulerQueue() {
-  let flushQueue = queue.slice(0)
-  queue = []
-  has = {}
-  pending = false
-  flushQueue.forEach(q => q.run()) // 在刷新的过程中可能还有新的 watcher，重新放到 queue 中
-}
-function queueWatcher(watcher) {
-  const id = watcher.id
-  if (!has[id]) {
-    queue.push(watcher)
-    has[id] = true
-    // 不管我们的 update 执行多少次 ，但是最终只执行一轮刷新操作
-    if (!pending) {
-      nextTick(flushSchedulerQueue)
-      pending = true
-    }
-  }
-}
-
-/** 实现暴露给用户API回调的异步更新 - nextTick */
-let callbacks = [] // 存储 nextTick 回调
-let waiting = false // 防抖
-function flushCallbacks() {
-  let cbs = callbacks.slice(0)
-  waiting = false
-  callbacks = []
-  cbs.forEach(cb => cb()) // 按照顺序依次执行
-}
-// vue2中 nextTick 没有直接使用某个api 而是采用优雅降级的方式
-// 内部先采用的是 promise(IE不兼容，微任务)  MutationObserver(H5的api，微任务)  setImmediate(IE专享，宏任务)  setTimeout（宏任务)
-// let timerFunc;
-// if (Promise) {
-//     timerFunc = () => {
-//         Promise.resolve().then(flushCallbacks)
-//     }
-// }else if(MutationObserver){
-//     let observer = new MutationObserver(flushCallbacks); // 这里传入的回调是异步执行的
-//     let textNode = document.createTextNode(1);
-//     observer.observe(textNode,{
-//         characterData:true
-//     });
-//     timerFunc = () => {
-//         textNode.textContent = 2;
-//     }
-// }else if(setImmediate){
-//     timerFunc = () => {
-//        setImmediate(flushCallbacks);
-//     }
-// }else{
-//     timerFunc = () => {
-//         setTimeout(flushCallbacks);
-//      }
-// }
-export function nextTick(cb) {
-  // 先内部还是先用户的？按照顺序依次执行
-  callbacks.push(cb) // 维护 nextTick 中的 cakllback 方法
-  if (!waiting) {
-    // timerFunc()
-    Promise.resolve().then(flushCallbacks)
-    waiting = true
   }
 }
 

@@ -11,18 +11,19 @@ let id = 0
 class Dep {
   constructor() {
     this.id = id++
-    this.subs = [] // 这里存放着当前属性对应的 watcher
+    // 依赖收集，收集当前属性对应的观察者 watcher
+    this.subs = [] 
   }
-  // 让watcher记住 dep
+  // 通知 watcher 收集 dep
   depend() {
     console.log('双向依赖收集')
     Dep.target.addDep(this)
   }
-  // 给当前的 dep 添加 watcher
+  // 让当前的 dep收集 watcher
   addSub(watcher) {
     this.subs.push(watcher)
   }
-  // 更新当前 dep 关联的所有 watcher
+  // 通知当前 dep关联的所有 watcher 去更新
   notify() {
     this.subs.forEach(watcher => watcher.update())
   }

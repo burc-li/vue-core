@@ -6,7 +6,7 @@ import { initMixin } from './init'
 import { initLifeCycle } from './lifecycle'
 import { initGlobalAPI } from './gloablAPI'
 
-import { nextTick } from './observe/watcher'
+import { nextTick } from "./util/next-tick"
 
 // 通过构造函数扩展方法
 function Vue(options) {
