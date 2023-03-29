@@ -303,7 +303,7 @@
   // 当前渲染的 watcher，静态变量，类似于全局变量，只有一份
   Dep.target = null;
 
-  // 存放 watcher 的栈， 目的：用于洋葱模型中计算属性watcher订阅的dep去收集上层watcher
+  // 存放 watcher 的栈， 目的：用于洋葱模型中，计算属性watcher 订阅的dep去收集上层watcher（可能是计算属性watcher，也可能是渲染watcher)
   let stack = [];
   // 当前 watcher 入栈， Dep.target 指向 当前 watcher
   function pushTarget(watcher) {
@@ -398,7 +398,7 @@
    * @todo 2. dirty：脏的，决定重新读取get返回值 还是 读取缓存值
    * @todo 3. value：存储 get返回值
    * @todo 4. evaluate 计算属性watcher为脏时，执行 evaluate，并将其标识为干净的
-   * @todo 5. depend 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher Dep.target
+   * @todo 5. depend 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher 即Dep.target（可能是计算属性watcher，也可能是渲染watcher)
    */
   let id = 0;
   class Watcher {
@@ -457,7 +457,7 @@
       this.value = this.get(); // 重新获取到用户函数的返回值
       this.dirty = false;
     }
-    // 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher Dep.target
+    // 用于洋葱模型中计算属性watcher 订阅的dep去 depend收集上层watcher 即Dep.target（可能是计算属性watcher，也可能是渲染watcher)
     depend() {
       let i = this.deps.length;
       while (i--) {
@@ -751,6 +751,7 @@
             }
           }
         }
+        console.log('>>>>>>>>>', key, dep);
         return value;
       },
       // 修改的时候 会执行set
@@ -788,7 +789,7 @@
    * @split 初始化计算属性---------
    * @todo 1. 给每个计算属性都创建一个 watcher，并标识为 lazy，不会立即执行 get-fn，并将计算属性watcher 都保存到 vm上
    * @todo 2. 劫持计算属性getter/setter
-   * @todo 3. 当访问计算属性时，如果为脏的，则重新获取值，如果为干净的，则取 watcher上的缓存值，还要让计算属性watcher订阅的dep，也去收集上一层watcher
+   * @todo 3. 当访问计算属性时，如果为脏的，则重新获取值，如果为干净的，则取 watcher上的缓存值，还要让计算属性watcher订阅的dep，我们应该让当前计算属性watcher 订阅的dep，也去收集上一层的watcher 即 Dep.target（可能是计算属性watcher，也可能是渲染watcher)
    */
 
   // 初始化状态
@@ -873,8 +874,8 @@
         watcher.evaluate(); // 求值后 dirty变为false，下次就不求值了，走缓存
       }
 
-      // 计算属性watcher 出栈后，还有渲染watcher，我们应该让计算属性watcher订阅的dep，也去收集上一层watcher
-      // 注：计算属性根本不会收集依赖，但是会让自己的依赖属性去收集依赖
+      // 当前计算属性watcher 出栈后，还有渲染watcher 或者其他计算属性watcher，我们应该让当前计算属性watcher 订阅的 dep，也去收集上一层的watcher 即Dep.target（可能是计算属性watcher，也可能是渲染watcher)
+      // 注：计算属性根本不会收集依赖，但是会让自己的依赖属性去收集watcher
       if (Dep.target) {
         watcher.depend();
       }

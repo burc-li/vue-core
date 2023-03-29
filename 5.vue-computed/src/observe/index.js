@@ -89,6 +89,7 @@ export function defineReactive(target, key, value) {
           }
         }
       }
+      console.log('>>>>>>>>>',key,dep)
       return value
     },
     // 修改的时候 会执行set

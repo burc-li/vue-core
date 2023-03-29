@@ -36,7 +36,7 @@ class Dep {
 // 当前渲染的 watcher，静态变量，类似于全局变量，只有一份
 Dep.target = null
 
-// 存放 watcher 的栈， 目的：用于洋葱模型中计算属性watcher订阅的dep去收集上层watcher
+// 存放 watcher 的栈， 目的：用于洋葱模型中，计算属性watcher 订阅的dep去收集上层watcher（可能是计算属性watcher，也可能是渲染watcher)
 let stack = []
 // 当前 watcher 入栈， Dep.target 指向 当前 watcher
 export function pushTarget(watcher) {

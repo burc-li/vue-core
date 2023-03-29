@@ -21,7 +21,7 @@
         data: {
           firstname: '李-',
           lastname: '百成',
-          age: 35,
+          age: 25,
         },
 
         // 我们要用defineProperty劫持计算属性，做一些getter 和 setter操作
@@ -31,12 +31,12 @@
         // 计算属性watcher 默认不会立刻执行 get
 
         computed: {
-          newName() {
-            return this.age
+          fullAge() {
+            return '，今年' + this.age + '岁了'
           },
           fullname() {
             console.log('run')
-            return this.firstname + this.lastname + this.newName
+            return this.firstname + this.lastname + this.fullAge
           },
 
           // fullname:{
@@ -51,9 +51,9 @@
         },
       })
 
-      setTimeout(() => {
-        vm.firstname = 'burc-' // 执行计算属性watcher更新操作；并将脏值 dirty 置为 true
-      }, 1000)
+      // setTimeout(() => {
+      //   vm.firstname = '马-' // 执行计算属性watcher更新操作；并将脏值 dirty 置为 true
+      // }, 1000)
     </script>
   </body>
 </html>

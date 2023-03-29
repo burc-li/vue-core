@@ -9,7 +9,7 @@
  * @todo 2. dirty：脏的，决定重新读取get返回值 还是 读取缓存值
  * @todo 3. value：存储 get返回值
  * @todo 4. evaluate 计算属性watcher为脏时，执行 evaluate，并将其标识为干净的
- * @todo 5. depend 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher Dep.target
+ * @todo 5. depend 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher 即Dep.target（可能是计算属性watcher，也可能是渲染watcher)
  */
 
 import { popTarget, pushTarget } from './dep'
@@ -72,7 +72,7 @@ class Watcher {
     this.value = this.get() // 重新获取到用户函数的返回值
     this.dirty = false
   }
-  // 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher Dep.target
+  // 用于洋葱模型中计算属性watcher 订阅的dep去 depend收集上层watcher 即Dep.target（可能是计算属性watcher，也可能是渲染watcher)
   depend() {
     let i = this.deps.length
     while (i--) {
