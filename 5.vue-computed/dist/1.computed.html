@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <div id="app">
+      <p>{{firstname}}</p>
+      <p>{{fullname}}</p>
+      <p>{{fullname}}</p>
+    </div>
+    <script src="vue.js"></script>
+    <!-- <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.14/vue.js"></script> -->
+    <script>
+      const vm = new Vue({
+        el: '#app',
+        data: {
+          firstname: '李-',
+          lastname: '百成',
+          age: 35,
+        },
+
+        // 我们要用defineProperty劫持计算属性，做一些getter 和 setter操作
+
+        // 计算属性是基于它们的响应式依赖进行缓存的。只在相关响应式依赖发生改变时它们才会重新求值。
+        // 会给每个计算属性创建对应的带有dirty属性的watcher，标识是否读取缓存中的值
+        // 计算属性watcher 默认不会立刻执行 get
+
+        computed: {
+          newName() {
+            return this.age
+          },
+          fullname() {
+            console.log('run')
+            return this.firstname + this.lastname + this.newName
+          },
+
+          // fullname:{
+          //     get(){
+          //         console.log('run')
+          //         return this.firstname + this.lastname
+          //     },
+          //     set(newVal){
+          //         console.log(newVal)
+          //     }
+          // }
+        },
+      })
+
+      setTimeout(() => {
+        vm.firstname = 'burc-' // 执行计算属性watcher更新操作；并将脏值 dirty 置为 true
+      }, 1000)
+    </script>
+  </body>
+</html>

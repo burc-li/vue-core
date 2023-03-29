@@ -273,6 +273,9 @@
    * @todo 1. dep 和 watcher 是一个多对多的关系
    * @todo 2. 一个属性可以在多个组件中使用 （一个 dep 对应多个 watcher）
    * @todo 3. 一个组件中由多个属性组成 （一个 watcher 对应多个 dep）
+   * @split 计算属性---------
+   * @todo 1. pushTarget
+   * @todo 2. popTarget
    */
 
   let id$1 = 0;
@@ -299,6 +302,19 @@
 
   // 当前渲染的 watcher，静态变量，类似于全局变量，只有一份
   Dep.target = null;
+
+  // 存放 watcher 的栈， 目的：用于洋葱模型中计算属性watcher订阅的dep去收集上层watcher
+  let stack = [];
+  // 当前 watcher 入栈， Dep.target 指向 当前 watcher
+  function pushTarget(watcher) {
+    stack.push(watcher);
+    Dep.target = watcher;
+  }
+  // 栈中最后一个 watcher 出栈，Dep.target指向栈中 最后一个 watcher，若栈为空，则为 undefined
+  function popTarget() {
+    stack.pop();
+    Dep.target = stack[stack.length - 1];
+  }
 
   /** 实现暴露给用户API回调的异步更新 - nextTick */
   let callbacks = []; // 存储 nextTick 回调
@@ -377,16 +393,29 @@
    * @decs 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
    * @todo 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
    * @todo 2. 调用_render() 会取值，走到 getter 上，调用 dep.depend() 进行双向依赖收集操作
+   * @split 计算属性---------
+   * @todo 1. lazy：懒的，不会立即执行get方法
+   * @todo 2. dirty：脏的，决定重新读取get返回值 还是 读取缓存值
+   * @todo 3. value：存储 get返回值
+   * @todo 4. evaluate 计算属性watcher为脏时，执行 evaluate，并将其标识为干净的
+   * @todo 5. depend 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher Dep.target
    */
   let id = 0;
   class Watcher {
-    constructor(vm, fn) {
+    constructor(vm, fn, options) {
       this.id = id++;
       this.getter = fn;
-      this.deps = []; // 用于后续我们实现计算属性，和一些清理工作
-      this.depsId = new Set();
-      this.get();
+      this.deps = []; // 存储订阅dep，用于后续我们实现计算属性洋葱模型，和一些清理工作
+      this.depsId = new Set(); // 用于去重
+
+      // 计算属性watcher 用到的属性
+      this.vm = vm;
+      this.lazy = options.lazy; // 懒的，不会立即执行get方法
+      this.dirty = this.lazy; // 脏的，决定重新读取get返回值 还是 读取缓存值
+
+      this.value = this.lazy ? undefined : this.get(); // 存储 get返回值
     }
+    // 订阅 dep，并通知 dep 收集 watcher
     addDep(dep) {
       // 一个组件 对应 多个属性 重复的属性不用记录，去重操作
       let id = dep.id;
@@ -398,28 +427,42 @@
     }
 
     get() {
-      // debugger
-      Dep.target = this; // Dep.target 是一个静态属性
-
+      pushTarget(this); // Dep.target 是一个静态属性
       // 执行vm._render时，去vm上取 name 和 age。vm._render -> vm.$options.render.call(vm) -> with(this){} -> _s(name) -> 就会去作用域链 即this 上取 name
       // JavaScript 查找某个未使用命名空间的变量时，会通过作用域链来查找，作用域链是跟执行代码的 context 或者包含这个变量的函数有关。'with'语句将某个对象添加到作用域链的顶部，如果在 statement 中有某个未使用命名空间的变量，跟作用域链中的某个属性同名，则这个变量将指向这个属性值
-      this.getter();
-      Dep.target = null; // 渲染完毕后就清空，保证了只有在模版渲染阶段的取值操作才会进行依赖收集
+      let value = this.getter.call(this.vm); // 会去vm上取值  vm._update(vm._render) 取name 和age
+      popTarget(); // 渲染完毕后就清空，保证了只有在模版渲染阶段的取值操作才会进行依赖收集
+      return value;
     }
-    // // 重新渲染
-    // update() {
-    //   console.log('watcher-update')
-    //   this.get()
-    // }
     // 重新渲染
     update() {
       console.log('watcher-update');
-      queueWatcher(this); // 把当前的 watcher 暂存起来
-      // this.get(); // 重新渲染
+      if (this.lazy) {
+        // 计算属性依赖的值发生改变，触发 setter 通知 watcher 更新，将计算属性watcher 标识为脏值即可
+        // 后面还会触发渲染watcher，会走 evaluate 重新读取返回值
+        this.dirty = true;
+      } else {
+        queueWatcher(this); // 把当前的watcher 暂存起来，异步队列渲染
+        // this.get(); // 重新渲染
+      }
     }
 
+    // queueWatcher 内部执行 run 方法
     run() {
       this.get(); // 渲染的时候用的是最新的 vm 来渲染的
+    }
+
+    // 计算属性watcher为脏时，执行 evaluate，并将其标识为干净的
+    evaluate() {
+      this.value = this.get(); // 重新获取到用户函数的返回值
+      this.dirty = false;
+    }
+    // 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher Dep.target
+    depend() {
+      let i = this.deps.length;
+      while (i--) {
+        this.deps[i].depend();
+      }
     }
   }
 
@@ -739,19 +782,29 @@
   }
 
   /**
-   * @name Vue初始化状态、初始化数据
+   * @name Vue初始化状态（初始化数据、初始化计算属性）
    * @todo 1. 对data进行劫持，并将data挂载到vm上 vm._data = data
    * @todo 2. 循环data，将vm._data用vm来代理
+   * @split 初始化计算属性---------
+   * @todo 1. 给每个计算属性都创建一个 watcher，并标识为 lazy，不会立即执行 get-fn，并将计算属性watcher 都保存到 vm上
+   * @todo 2. 劫持计算属性getter/setter
+   * @todo 3. 当访问计算属性时，如果为脏的，则重新获取值，如果为干净的，则取 watcher上的缓存值，还要让计算属性watcher订阅的dep，也去收集上一层watcher
    */
 
   // 初始化状态
   function initState(vm) {
     const opts = vm.$options; // 获取所有的选项
+
+    // 初始化数据
     if (opts.data) {
-      initData(vm); // 初始化数据
+      initData(vm);
+    }
+
+    // 初始化计算属性
+    if (opts.computed) {
+      initComputed(vm);
     }
   }
-
   function proxy(vm, target, key) {
     Object.defineProperty(vm, key, {
       // vm.name
@@ -779,6 +832,56 @@
       if (key === '_data') return;
       proxy(vm, '_data', key);
     }
+  }
+
+  // 初始化计算属性
+  function initComputed(vm) {
+    const computed = vm.$options.computed;
+    const watchers = vm._computedWatchers = {}; // 将每个计算属性对应的watcher 都保存到 vm上
+    for (let key in computed) {
+      let userDef = computed[key];
+
+      // 兼容不同写法 函数方式 和 对象getter/setter方式
+      let fn = typeof userDef === 'function' ? userDef : userDef.get;
+
+      // 给每个计算属性都创建一个 watcher，并标识为 lazy，不会立即执行 get-fn
+      watchers[key] = new Watcher(vm, fn, {
+        lazy: true
+      });
+
+      // 劫持计算属性getter/setter
+      defineComputed(vm, key, userDef);
+    }
+  }
+
+  // 劫持计算属性
+  function defineComputed(target, key, userDef) {
+    const setter = userDef.set || (() => {});
+    Object.defineProperty(target, key, {
+      get: createComputedGetter(key),
+      set: setter
+    });
+  }
+
+  // 劫持计算属性的访问
+  function createComputedGetter(key) {
+    return function () {
+      const watcher = this._computedWatchers[key]; // this就是 defineProperty 劫持的targer。获取到计算属性对应的watcher
+
+      // 如果是脏的，就去执行用户传入的函数
+      if (watcher.dirty) {
+        watcher.evaluate(); // 求值后 dirty变为false，下次就不求值了，走缓存
+      }
+
+      // 计算属性watcher 出栈后，还有渲染watcher，我们应该让计算属性watcher订阅的dep，也去收集上一层watcher
+      // 注：计算属性根本不会收集依赖，但是会让自己的依赖属性去收集依赖
+      if (Dep.target) {
+        watcher.depend();
+      }
+
+      // 返回watcher上的值
+      return watcher.value;
+    };
   }
 
   /**
