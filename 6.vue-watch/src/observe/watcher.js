@@ -12,8 +12,9 @@
  * @todo 5. depend 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher 即Dep.target（可能是计算属性watcher，也可能是渲染watcher)
  * @split 监听器watcher---------
  * @todo 1. user：用户watcher，即监听器watcher
- * @todo 2. cb：监听器回调
- * @todo 3. 在 queueWatcher 内部执行 run 方法时，如果是 用户watcher，则执行回调方法
+ * @todo 2. deep：深度监听，若为深度监听，则在 get 方法中递归取值，让每一个子属性都收集监听器watcher
+ * @todo 3. cb：监听器回调
+ * @todo 4. 在 queueWatcher 内部执行 run 方法时，如果是 用户watcher，则执行监听器cb回调方法
  */
 
 import { popTarget, pushTarget } from './dep'
@@ -43,8 +44,8 @@ class Watcher {
 
     // 监听器watcher 用到的属性
     this.user = options.user // 标识是否是用户自己的watcher
-    this.cb = cb
     this.deep = options.deep
+    this.cb = cb
 
     this.value = this.lazy ? undefined : this.get() // 存储 get返回值
   }
@@ -63,6 +64,9 @@ class Watcher {
     // 执行vm._render时，去vm上取 name 和 age。vm._render -> vm.$options.render.call(vm) -> with(this){} -> _s(name) -> 就会去作用域链 即this 上取 name
     // JavaScript 查找某个未使用命名空间的变量时，会通过作用域链来查找，作用域链是跟执行代码的 context 或者包含这个变量的函数有关。'with'语句将某个对象添加到作用域链的顶部，如果在 statement 中有某个未使用命名空间的变量，跟作用域链中的某个属性同名，则这个变量将指向这个属性值
     let value = this.getter.call(this.vm) // 会去vm上取值  vm._update(vm._render) 取name 和age
+
+    // 深度监听
+    this.deep && JSON.stringify(value)
 
     popTarget() // 渲染完毕后就清空，保证了只有在模版渲染阶段的取值操作才会进行依赖收集
     return value

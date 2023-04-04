@@ -21,9 +21,15 @@ initGlobalAPI(Vue) // 在Vue上扩展全局属性和方法 Vue.options Vue.mixin
 Vue.prototype.$nextTick = nextTick // 把 nextTick 挂载到vue原型上，方便用户在实例上使用
 
 // 监听的值发生变化了，直接执行cb函数即可
-Vue.prototype.$watch = function (exprOrFn, cb) {
+Vue.prototype.$watch = function (exprOrFn, cb, options = {}) {
+  options.user = true
   // exprOrFn 可能是 字符串firstname or 函数()=>vm.firstname
-  new Watcher(this, exprOrFn, { user: true }, cb)
+  const watcher = new Watcher(this, exprOrFn, options, cb)
+
+  // 立即执行
+  if(options.immediate){
+    cb.call(this, watcher.value, undefined)
+  }
 }
 
 export default Vue

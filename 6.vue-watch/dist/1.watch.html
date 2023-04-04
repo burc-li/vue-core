@@ -59,9 +59,15 @@
         //   },
         // ],
 
-        obj: function (newValue, oldValue) {
-          console.log('>>>>>>watch_监测对象', newValue, oldValue)
+        // 场景5：立即执行 和 深度监听对象
+        obj: {
+          handler: function (newValue, oldValue) {
+            console.log('>>>>>>watch_监测对象', newValue, oldValue)
+          },
+          deep: true,
+          immediate: true
         },
+
       },
 
       computed: {
@@ -73,25 +79,19 @@
 
     // key 为函数
     // 就算你写的是上面的方式，底层也会被转化成$watch的写法
-    // vm.$watch(
-    //   function exprOrFn() {
-    //     return vm.fullname
-    //   },
-    //   function cb(newValue, oldValue) {
-    //     console.log('$watche。。。', newValue, oldValue)
-    //   },
-    // )
+    vm.$watch(
+      function exprOrFn() {
+        return vm.fullname
+      },
+      function cb(newValue, oldValue) {
+        console.log('>>>>>>watch_$watch', newValue, oldValue)
+      },
+    )
 
     setTimeout(() => {
       vm.firstname = '李·1' // 会执行什么？ 执行计算属性watcher更新操作  dirty = true;
       vm.firstname = '李·2';
       vm.firstname = 'new李';
-    }, 1000)
-
-    setTimeout(() => {
-      // vm.obj = {
-      //   a: 3
-      // }
       vm.obj.a = 2
     }, 1000)
   </script>

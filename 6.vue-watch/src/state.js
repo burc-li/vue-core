@@ -133,13 +133,15 @@ function initWatch(vm) {
 
 // 最终调用 vm.$watch 去创建一个监听器watch
 function createWatcher(vm, key, handler) {
+  let options = {}
   // handler 有可能是 字符串  函数 对象
   if (typeof handler === 'string') {
     handler = vm[handler]
   }
   // 兼容对象
   else if (Object.prototype.toString.call(handler) === '[object Object]') {
+    options = handler
     handler = handler.handler
   }
-  return vm.$watch(key, handler)
+  return vm.$watch(key, handler, options)
 }
