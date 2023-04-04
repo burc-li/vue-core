@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script src="vue.js"></script>
+  <!-- <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.14/vue.js"></script> -->
+  <script>
+    const vm = new Vue({
+      el: '#app',
+      data: {
+        firstname: '李',
+        lastname: '百成',
+        age: 13,
+        obj: {
+          a: 1,
+        },
+      },
+
+      methods: {
+        fn() {
+          console.log('>>>>>>watch_字符串格式')
+        },
+      },
+
+      // 直接写一个函数
+      // 数组写法
+      watch: {
+        // 场景1：handler 为 字符串，一般不常用，本地无法测试，因为没有初始化methods
+        // firstname: 'fn',
+
+        // 场景2：handler 为 函数
+        // firstname(newValue, oldValue) {
+        //   console.log('>>>>>>watche_函数格式', newValue, oldValue)
+        // },
+
+        // 场景3：handler 为 对象
+        // firstname: {
+        //   handler: (newValue, oldValue) => {
+        //     console.log('>>>>>>watch_对象格式', newValue, oldValue)
+        //   },
+        //   immediate: true
+        // },
+
+        // 场景4：handler 为 数组
+        // firstname: [
+        //   function (newValue, oldValue) {
+        //     console.log('>>>>>>watch_数组格式1', newValue, oldValue)
+        //   },
+        //   function (newValue, oldValue) {
+        //     console.log('>>>>>>watch_数组格式2', newValue, oldValue)
+        //   },
+        // ],
+
+        obj: function (newValue, oldValue) {
+          console.log('>>>>>>watch_监测对象', newValue, oldValue)
+        },
+      },
+
+      computed: {
+        fullname() {
+          return this.firstname + this.lastname
+        },
+      },
+    })
+
+    // key 为函数
+    // 就算你写的是上面的方式，底层也会被转化成$watch的写法
+    // vm.$watch(
+    //   function exprOrFn() {
+    //     return vm.fullname
+    //   },
+    //   function cb(newValue, oldValue) {
+    //     console.log('$watche。。。', newValue, oldValue)
+    //   },
+    // )
+
+    setTimeout(() => {
+      vm.firstname = '李·1' // 会执行什么？ 执行计算属性watcher更新操作  dirty = true;
+      vm.firstname = '李·2';
+      vm.firstname = 'new李';
+    }, 1000)
+
+    setTimeout(() => {
+      // vm.obj = {
+      //   a: 3
+      // }
+      vm.obj.a = 2
+    }, 1000)
+  </script>
+</body>
+
+</html>

@@ -20,7 +20,6 @@ class Dep {
   }
   // 通知 watcher 收集 dep
   depend() {
-    console.log('双向依赖收集')
     Dep.target.addDep(this)
   }
   // 让当前的 dep收集 watcher

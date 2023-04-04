@@ -287,7 +287,6 @@
     }
     // 通知 watcher 收集 dep
     depend() {
-      console.log('双向依赖收集');
       Dep.target.addDep(this);
     }
     // 让当前的 dep收集 watcher
@@ -393,18 +392,29 @@
    * @decs 不同组件有不同的 watcher，目前我们只有一个渲染根实例的 watcher
    * @todo 1. 当我们创建渲染 watcher 的时候，我们会把当前的渲染 watcher 放到 Dep.target 上
    * @todo 2. 调用_render() 会取值，走到 getter 上，调用 dep.depend() 进行双向依赖收集操作
-   * @split 计算属性---------
+   * @split 计算属性watcher---------
    * @todo 1. lazy：懒的，不会立即执行get方法
    * @todo 2. dirty：脏的，决定重新读取get返回值 还是 读取缓存值
    * @todo 3. value：存储 get返回值
    * @todo 4. evaluate 计算属性watcher为脏时，执行 evaluate，并将其标识为干净的
    * @todo 5. depend 用于洋葱模型中计算属性watcher订阅的dep 去depend收集上层watcher 即Dep.target（可能是计算属性watcher，也可能是渲染watcher)
+   * @split 监听器watcher---------
+   * @todo 1. user：用户watcher，即监听器watcher
+   * @todo 2. cb：监听器回调
+   * @todo 3. 在 queueWatcher 内部执行 run 方法时，如果是 用户watcher，则执行回调方法
    */
   let id = 0;
   class Watcher {
-    constructor(vm, fn, options) {
+    constructor(vm, exprOrFn, options, cb) {
       this.id = id++;
-      this.getter = fn;
+      if (typeof exprOrFn === 'string') {
+        this.getter = function () {
+          return vm[exprOrFn];
+        };
+      } else {
+        this.getter = exprOrFn; // getter意味着调用这个函数可以发生取值操作
+      }
+
       this.deps = []; // 存储订阅dep，用于后续我们实现计算属性洋葱模型，和一些清理工作
       this.depsId = new Set(); // 用于去重
 
@@ -413,6 +423,10 @@
       this.lazy = options.lazy; // 懒的，不会立即执行get方法
       this.dirty = this.lazy; // 脏的，决定重新读取get返回值 还是 读取缓存值
 
+      // 监听器watcher 用到的属性
+      this.user = options.user; // 标识是否是用户自己的watcher
+      this.cb = cb;
+      this.deep = options.deep;
       this.value = this.lazy ? undefined : this.get(); // 存储 get返回值
     }
     // 订阅 dep，并通知 dep 收集 watcher
@@ -431,6 +445,7 @@
       // 执行vm._render时，去vm上取 name 和 age。vm._render -> vm.$options.render.call(vm) -> with(this){} -> _s(name) -> 就会去作用域链 即this 上取 name
       // JavaScript 查找某个未使用命名空间的变量时，会通过作用域链来查找，作用域链是跟执行代码的 context 或者包含这个变量的函数有关。'with'语句将某个对象添加到作用域链的顶部，如果在 statement 中有某个未使用命名空间的变量，跟作用域链中的某个属性同名，则这个变量将指向这个属性值
       let value = this.getter.call(this.vm); // 会去vm上取值  vm._update(vm._render) 取name 和age
+
       popTarget(); // 渲染完毕后就清空，保证了只有在模版渲染阶段的取值操作才会进行依赖收集
       return value;
     }
@@ -449,7 +464,11 @@
 
     // queueWatcher 内部执行 run 方法
     run() {
-      this.get(); // 渲染的时候用的是最新的 vm 来渲染的
+      let oldValue = this.value;
+      let newValue = this.value = this.get(); // 渲染的时候用的是最新的vm来渲染的，需要重新赋值啊！！！！！
+      if (this.user) {
+        this.cb.call(this.vm, newValue, oldValue);
+      }
     }
 
     // 计算属性watcher为脏时，执行 evaluate，并将其标识为干净的
@@ -751,7 +770,6 @@
             }
           }
         }
-        console.log('>>>>>>>>>', key, dep);
         return value;
       },
       // 修改的时候 会执行set
@@ -761,7 +779,7 @@
         // 修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
         observe(newValue);
         value = newValue;
-        console.log('dep', dep);
+
         // 通知 watcher 更新
         dep.notify();
       }
@@ -784,12 +802,17 @@
 
   /**
    * @name Vue初始化状态（初始化数据、初始化计算属性）
+   * @split 初始化数据---------
    * @todo 1. 对data进行劫持，并将data挂载到vm上 vm._data = data
    * @todo 2. 循环data，将vm._data用vm来代理
    * @split 初始化计算属性---------
    * @todo 1. 给每个计算属性都创建一个 watcher，并标识为 lazy，不会立即执行 get-fn，并将计算属性watcher 都保存到 vm上
    * @todo 2. 劫持计算属性getter/setter
    * @todo 3. 当访问计算属性时，如果为脏的，则重新获取值，如果为干净的，则取 watcher上的缓存值，还要让计算属性watcher订阅的dep，我们应该让当前计算属性watcher 订阅的dep，也去收集上一层的watcher 即 Dep.target（可能是计算属性watcher，也可能是渲染watcher)
+   * @split 初始化监听器---------
+   * @todo 1. key：需要观察的表达式；要兼容 字符串 or 函数
+   * @todo 2. handler：回调函数；要兼容 数组 or （字符串、函数、对象）情况
+   * @todo 3. 最终调用 vm.$watch 去创建一个监听器watch
    */
 
   // 初始化状态
@@ -804,6 +827,11 @@
     // 初始化计算属性
     if (opts.computed) {
       initComputed(vm);
+    }
+
+    // 初始化监听器
+    if (opts.watch) {
+      initWatch(vm);
     }
   }
   function proxy(vm, target, key) {
@@ -864,7 +892,7 @@
     });
   }
 
-  // 劫持计算属性的访问
+  // 劫持计算属性的访问/getter
   function createComputedGetter(key) {
     return function () {
       const watcher = this._computedWatchers[key]; // this就是 defineProperty 劫持的targer。获取到计算属性对应的watcher
@@ -883,6 +911,34 @@
       // 返回watcher上的值
       return watcher.value;
     };
+  }
+
+  // 初始化监听器
+  function initWatch(vm) {
+    let watch = vm.$options.watch;
+    for (let key in watch) {
+      const handler = watch[key]; // handler有可能是 (字符串 函数 对象) 或 数组
+      if (Array.isArray(handler)) {
+        for (let i = 0; i < handler.length; i++) {
+          createWatcher(vm, key, handler[i]);
+        }
+      } else {
+        createWatcher(vm, key, handler);
+      }
+    }
+  }
+
+  // 最终调用 vm.$watch 去创建一个监听器watch
+  function createWatcher(vm, key, handler) {
+    // handler 有可能是 字符串  函数 对象
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+    // 兼容对象
+    else if (Object.prototype.toString.call(handler) === '[object Object]') {
+      handler = handler.handler;
+    }
+    return vm.$watch(key, handler);
   }
 
   /**
@@ -1010,12 +1066,20 @@
     this._init(options); // 默认就调用了init
   }
 
-  Vue.prototype.$nextTick = nextTick; // 把 nextTick 挂载到vue原型上，方便用户在实例上使用
-
   initMixin(Vue); // 在Vue原型上扩展init方法  Vue.prototype._init  Vue.prototype.$mount
   initLifeCycle(Vue); // 在Vue原型上扩展 render 函数相关的方法   Vue.prototype._render   Vue.prototype._update
 
   initGlobalAPI(Vue); // 在Vue上扩展全局属性和方法 Vue.options Vue.mixin
+
+  Vue.prototype.$nextTick = nextTick; // 把 nextTick 挂载到vue原型上，方便用户在实例上使用
+
+  // 监听的值发生变化了，直接执行cb函数即可
+  Vue.prototype.$watch = function (exprOrFn, cb) {
+    // exprOrFn 可能是 字符串firstname or 函数()=>vm.firstname
+    new Watcher(this, exprOrFn, {
+      user: true
+    }, cb);
+  };
 
   return Vue;
 

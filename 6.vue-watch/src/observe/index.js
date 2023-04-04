@@ -89,7 +89,6 @@ export function defineReactive(target, key, value) {
           }
         }
       }
-      console.log('>>>>>>>>>',key,dep)
       return value
     },
     // 修改的时候 会执行set
@@ -100,7 +99,6 @@ export function defineReactive(target, key, value) {
       observe(newValue)
       value = newValue
 
-      console.log('dep', dep)
       // 通知 watcher 更新
       dep.notify()
     },
