@@ -16,6 +16,7 @@
 import { observe } from './observe/index'
 import Watcher from './observe/watcher'
 import Dep from './observe/dep'
+import { nextTick } from './util/next-tick'
 
 // 初始化状态
 export function initState(vm) {
@@ -37,18 +38,6 @@ export function initState(vm) {
   }
 }
 
-function proxy(vm, target, key) {
-  Object.defineProperty(vm, key, {
-    // vm.name
-    get() {
-      return vm[target][key] // vm._data.name
-    },
-    set(newValue) {
-      vm[target][key] = newValue
-    },
-  })
-}
-
 // 初始化数据
 function initData(vm) {
   let data = vm.$options.data // data可能是函数和对象
@@ -65,6 +54,18 @@ function initData(vm) {
 
     proxy(vm, '_data', key)
   }
+}
+
+function proxy(vm, target, key) {
+  Object.defineProperty(vm, key, {
+    // vm.name
+    get() {
+      return vm[target][key] // vm._data.name
+    },
+    set(newValue) {
+      vm[target][key] = newValue
+    },
+  })
 }
 
 // 初始化计算属性
@@ -144,4 +145,21 @@ function createWatcher(vm, key, handler) {
     handler = handler.handler
   }
   return vm.$watch(key, handler, options)
+}
+
+// 在Vue原型上扩展 $nextTick $watch 方法
+export function initStateMixin(Vue) {
+  Vue.prototype.$nextTick = nextTick // 把 nextTick 挂载到vue原型上，方便用户在实例上使用
+
+  // 监听的值发生变化了，直接执行cb函数即可
+  Vue.prototype.$watch = function (exprOrFn, cb, options = {}) {
+    options.user = true
+    // exprOrFn 可能是 字符串firstname or 函数()=>vm.firstname
+    const watcher = new Watcher(this, exprOrFn, options, cb)
+
+    // 立即执行
+    if (options.immediate) {
+      cb.call(this, watcher.value, undefined)
+    }
+  }
 }
