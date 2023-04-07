@@ -98,7 +98,7 @@ export function defineReactive(target, key, value) {
       // 修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
       observe(newValue)
       value = newValue
-
+      console.log('>>>>>dep',key,dep)
       // 通知 watcher 更新
       dep.notify()
     },

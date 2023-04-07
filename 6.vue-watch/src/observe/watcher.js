@@ -79,7 +79,7 @@ class Watcher {
       // 后面还会触发渲染watcher，会走 evaluate 重新读取返回值
       this.dirty = true
     } else {
-      queueWatcher(this) // 把当前的watcher 暂存起来，异步队列渲染
+      queueWatcher(this) // 把当前的watcher 暂存起来，异步队列渲染，最终执行 run 方法
       // this.get(); // 重新渲染
     }
   }

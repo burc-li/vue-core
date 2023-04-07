@@ -460,7 +460,7 @@
         // 后面还会触发渲染watcher，会走 evaluate 重新读取返回值
         this.dirty = true;
       } else {
-        queueWatcher(this); // 把当前的watcher 暂存起来，异步队列渲染
+        queueWatcher(this); // 把当前的watcher 暂存起来，异步队列渲染，最终执行 run 方法
         // this.get(); // 重新渲染
       }
     }
@@ -782,7 +782,7 @@
         // 修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
         observe(newValue);
         value = newValue;
-
+        console.log('>>>>>dep', key, dep);
         // 通知 watcher 更新
         dep.notify();
       }
