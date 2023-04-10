@@ -547,7 +547,7 @@
     if (typeof tag === 'string') {
       // 标签
       vnode.el = document.createElement(tag); // 这里将真实节点和虚拟节点对应起来，后续如果修改属性了
-      patchProps(vnode.el, data);
+      patchProps(vnode.el, {}, data);
       children.forEach(child => {
         vnode.el.appendChild(createElm(child));
       });
@@ -558,7 +558,22 @@
   }
 
   // 对比属性打补丁
-  function patchProps(el, props) {
+  function patchProps(el, oldProps, props) {
+    // 老的属性中有，新的没有  要删除老的
+    let oldStyles = oldProps.style || {};
+    let newStyles = props.style || {};
+    for (let key in oldStyles) {
+      // 老的样式中有，新的没有，则删除
+      if (!newStyles[key]) {
+        el.style[key] = '';
+      }
+    }
+    for (let key in oldProps) {
+      // 老的属性中有，新的没有，则删除
+      if (!props[key]) {
+        el.removeAttribute(key);
+      }
+    }
     for (let key in props) {
       if (key === 'style') {
         // { color: 'red', "background": 'yellow' }
@@ -596,6 +611,17 @@
       oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
       return el;
     }
+
+    // 2. 新老节点相同
+    // 2.1 是文本，比较文本内容
+    let el = vnode.el = oldVNode.el; // 复用老节点的元素
+    if (!oldVNode.tag) {
+      if (oldVNode.text !== vnode.text) {
+        el.textContent = vnode.text; // 用新的文本覆盖掉老的
+      }
+    }
+    // 2.2 是标签，比较标签属性
+    patchProps(el, oldVNode.data, vnode.data);
   }
 
   /**
@@ -1109,7 +1135,7 @@
 
   // 新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
   const diffDemo = function () {
-    let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60">老节点</h1>`);
+    let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60">老节点</h1>`);
     let vm1 = new Vue({
       data: {
         name: 'burc'
@@ -1118,14 +1144,16 @@
     let prevVnode = render1.call(vm1);
     let el = createElm(prevVnode);
     document.body.appendChild(el);
-
-    // let render2 = compileToFunction(`<h1>新节点</h1>`)
-    // let vm2 = new Vue({ data: { name: 'burc' } })
-    // let nextVnode = render2.call(vm2)
-
-    // setTimeout(() => {
-    //   patch(prevVnode, nextVnode)
-    // }, 1000)
+    let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60">新节点</h1>`);
+    let vm2 = new Vue({
+      data: {
+        name: 'burc'
+      }
+    });
+    let nextVnode = render2.call(vm2);
+    setTimeout(() => {
+      patch(prevVnode, nextVnode);
+    }, 1000);
   };
 
   /**
