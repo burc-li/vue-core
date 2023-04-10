@@ -1,3 +1,12 @@
+/**
+ * @name patch比对 - 核心就是diff算法
+ * @desc diff算法是一个平级比较的过程，父亲和父亲比对，儿子和儿子比对
+ * @todo 1、新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
+ * @todo 1、两个节点是同一个节点 (判断节点的tag和节点的key) ，比较两个节点的属性是否有差异（复用老的节点，将差异的属性更新）
+ * @todo 1、节点比较完毕后就需要比较两个节点的儿子
+ */
+import { isSameVnode } from './index'
+
 // 利用vnode创建真实元素
 export function createElm(vnode) {
   let { tag, data, children, text } = vnode
@@ -43,6 +52,16 @@ export function patch(oldVNode, vnode) {
 
     return newElm
   } else {
-    // diff算法
+    // diff 算法
+    return patchVnode(oldVNode, vnode)
+  }
+}
+
+function patchVnode(oldVNode, vnode) {
+  // 1. 新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
+  if (!isSameVnode(oldVNode, vnode)) {
+    let el = createElm(vnode)
+    oldVNode.el.parentNode.replaceChild(el, oldVNode.el)
+    return el
   }
 }

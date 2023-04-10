@@ -32,3 +32,8 @@ function vnode(vm, tag, key, data, children, text) {
     // ....
   }
 }
+
+// 判断是否是相同节点 tag标签名相同 && key相同
+export function isSameVnode(vnode1, vnode2) {
+  return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key
+}

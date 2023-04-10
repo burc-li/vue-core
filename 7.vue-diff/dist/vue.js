@@ -523,6 +523,19 @@
     };
   }
 
+  // 判断是否是相同节点 tag标签名相同 && key相同
+  function isSameVnode(vnode1, vnode2) {
+    return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key;
+  }
+
+  /**
+   * @name patch比对 - 核心就是diff算法
+   * @desc diff算法是一个平级比较的过程，父亲和父亲比对，儿子和儿子比对
+   * @todo 1、新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
+   * @todo 1、两个节点是同一个节点 (判断节点的tag和节点的key) ，比较两个节点的属性是否有差异（复用老的节点，将差异的属性更新）
+   * @todo 1、节点比较完毕后就需要比较两个节点的儿子
+   */
+
   // 利用vnode创建真实元素
   function createElm(vnode) {
     let {
@@ -571,6 +584,17 @@
       parentElm.removeChild(elm); // 删除老节点
 
       return newElm;
+    } else {
+      // diff 算法
+      return patchVnode(oldVNode, vnode);
+    }
+  }
+  function patchVnode(oldVNode, vnode) {
+    // 1. 新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
+    if (!isSameVnode(oldVNode, vnode)) {
+      let el = createElm(vnode);
+      oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
+      return el;
     }
   }
 
@@ -1081,6 +1105,29 @@
     };
   }
 
+  // ------------- 为了方便观察前后的虚拟节点--测试的-----------------
+
+  // 新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
+  const diffDemo = function () {
+    let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60">老节点</h1>`);
+    let vm1 = new Vue({
+      data: {
+        name: 'burc'
+      }
+    });
+    let prevVnode = render1.call(vm1);
+    let el = createElm(prevVnode);
+    document.body.appendChild(el);
+
+    // let render2 = compileToFunction(`<h1>新节点</h1>`)
+    // let vm2 = new Vue({ data: { name: 'burc' } })
+    // let nextVnode = render2.call(vm2)
+
+    // setTimeout(() => {
+    //   patch(prevVnode, nextVnode)
+    // }, 1000)
+  };
+
   /**
    * @name 实现Vue构造函数
    */
@@ -1095,6 +1142,8 @@
   initStateMixin(Vue); // 在Vue原型上扩展 $nextTick $watch 方法
 
   initGlobalAPI(Vue); // 在Vue上扩展全局属性和方法 Vue.options Vue.mixin
+
+  diffDemo(); // 测试diff，方便观察前后的虚拟节点
 
   return Vue;
 

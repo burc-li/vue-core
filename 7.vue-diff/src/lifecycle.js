@@ -7,9 +7,9 @@
  * @todo mountComponent 方法内实例化一个渲染 watcher，并立即执行其回调
  * @todo callHook 调用生命周期钩子函数
  */
-import Watcher from "./observe/watcher";
+import Watcher from './observe/watcher'
 import { createElementVNode, createTextVNode } from './vdom'
-import { patch } from "./vdom/patch";
+import { patch } from './vdom/patch'
 
 // 在Vue原型上扩展 render 函数相关的方法， _c _s _v ...
 export function initLifeCycle(Vue) {
@@ -53,7 +53,7 @@ export function mountComponent(vm, el) {
 
   // true用于标识是一个渲染watcher
   const watcher = new Watcher(vm, updateComponent, true)
-  console.log('watcher',watcher)
+  console.log('watcher', watcher)
 }
 
 // vue核心流程
@@ -70,4 +70,3 @@ export function callHook(vm, hook) {
     handlers.forEach(handler => handler.call(vm))
   }
 }
-
