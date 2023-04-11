@@ -612,7 +612,7 @@
       oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
       return el;
     }
-    let el = vnode.el = oldVNode.el; // 复用老节点的元素
+    let el = vnode.el = oldVNode.el;
 
     // 2. 新老节点相同，且是文本 (判断节点的tag和节点的key)，比较文本内容
     if (!oldVNode.tag) {
@@ -624,21 +624,25 @@
     // 3. 新老节点相同，且是标签 (判断节点的tag和节点的key)
     // 3.1 比较标签属性
     patchProps(el, oldVNode.data, vnode.data);
-
-    // 3.2 比较两个节点的儿子
     let oldChildren = oldVNode.children || [];
     let newChildren = vnode.children || [];
-
+    // 3.2 比较两个节点的儿子
     // 3.2.1 新老节点都有儿子
     if (oldChildren.length > 0 && newChildren.length > 0) {
       // diff算法核心！！！
       updateChildren(el, oldChildren, newChildren);
     }
-    // 3.2.2 新节点有儿子，老节点没有儿子
+    // 3.2.2 新节点有儿子，老节点没有儿子，挂载
     else if (newChildren.length > 0) {
       mountChildren(el, newChildren);
     }
+    // 3.2.3 老节点有儿子，新节点没有儿子，删除
+    else if (oldChildren.length > 0) {
+      el.innerHTML = '';
+    }
   }
+
+  // 挂载孩子
   function mountChildren(el, newChildren) {
     for (let i = 0; i < newChildren.length; i++) {
       let child = newChildren[i];
@@ -1178,8 +1182,15 @@
 
     // 2. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
     // 老节点没孩子，新节点有孩子
-    let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60; height: 85px"></h1>`);
-    let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60; height: 85px"><li>1</li><li>2</li></h1>`);
+    // let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60; height: 85px"></h1>`)
+    // let render2 = compileToFunction(
+    //   `<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60; height: 85px"><li>1</li><li>2</li></h1>`,
+    // )
+
+    // 2. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
+    // 老节点没孩子，新节点有孩子
+    let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60; height: 85px"><li>1</li><li>2</li></h1>`);
+    let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60; height: 85px"></h1>`);
 
     // X. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
     // 新老节点都有孩子，（此时孩子是文本）

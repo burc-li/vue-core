@@ -10,9 +10,16 @@ const renderMap = function () {
 
   // 2. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
   // 老节点没孩子，新节点有孩子
-  let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60; height: 85px"></h1>`)
+  // let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60; height: 85px"></h1>`)
+  // let render2 = compileToFunction(
+  //   `<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60; height: 85px"><li>1</li><li>2</li></h1>`,
+  // )
+
+  // 2. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
+  // 老节点没孩子，新节点有孩子
+  let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60; height: 85px"><li>1</li><li>2</li></h1>`)
   let render2 = compileToFunction(
-    `<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60; height: 85px"><li>1</li><li>2</li></h1>`,
+    `<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60; height: 85px"></h1>`,
   )
 
   // X. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
