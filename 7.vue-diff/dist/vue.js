@@ -532,8 +532,11 @@
    * @name patch比对 - 核心就是diff算法
    * @desc diff算法是一个平级比较的过程，父亲和父亲比对，儿子和儿子比对
    * @todo 1、新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
-   * @todo 1、两个节点是同一个节点 (判断节点的tag和节点的key) ，比较两个节点的属性是否有差异（复用老的节点，将差异的属性更新）
-   * @todo 1、节点比较完毕后就需要比较两个节点的儿子
+   * @todo 2、两个节点是同一个节点 (判断节点的tag和节点的key) ，比较两个节点的属性是否有差异（复用老的节点，将差异的属性更新）
+   * @todo 3、节点比较完毕后，,需要比较两个节点的儿子
+   * @todo 3.1、新节点有孩子，老节点没有孩子，挂载
+   * @todo 3.2、老节点有孩子，新节点没有孩子，删除
+   * @todo 3.3、新老节点都有孩子 - diff核心算法
    */
 
   // 利用vnode创建真实元素
@@ -649,6 +652,8 @@
       el.appendChild(createElm(child));
     }
   }
+
+  // diff - 核心
   function updateChildren(el, oldChildren, newChildren) {
     let oldStartIndex = 0;
     let newStartIndex = 0;
