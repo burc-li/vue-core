@@ -8,8 +8,7 @@ const renderMap = function () {
   // let render1 = compileToFunction(`<h1 key='a'>老节点</h1>`)
   // let render2 = compileToFunction(`<h1 key='b'>新节点</h1>`)
 
-  // 2. 新老节点相同，且是文本 (判断节点的tag和节点的key)，比较文本内容
-  // 3. 新老节点相同，且是标签 (判断节点的tag和节点的key)，比较标签属性
+  // 2. 新老节点相同，且是标签，比较标签属性；然后比较孩子（文本孩子）
   let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60">老节点</h1>`)
   let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60">新节点</h1>`)
 

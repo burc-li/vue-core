@@ -24,7 +24,7 @@ export function createElm(vnode) {
 }
 
 // 对比属性打补丁
-export function patchProps(el, oldProps, props) {
+export function patchProps(el, oldProps = {}, props = {}) {
   // 老的属性中有，新的没有  要删除老的
   let oldStyles = oldProps.style || {}
   let newStyles = props.style || {}
@@ -85,13 +85,44 @@ function patchVnode(oldVNode, vnode) {
   let el = (vnode.el = oldVNode.el) // 复用老节点的元素
 
   // 2. 新老节点相同，且是文本 (判断节点的tag和节点的key)，比较文本内容
-  // if (!oldVNode.tag) {
-  //   if (oldVNode.text !== vnode.text) {
-  //     el.textContent = vnode.text // 用新的文本覆盖掉老的
-  //   }
-  // }
+  if (!oldVNode.tag) {
+    if (oldVNode.text !== vnode.text) {
+      el.textContent = vnode.text // 用新的文本覆盖掉老的
+    }
+  }
 
   // 3. 新老节点相同，且是标签 (判断节点的tag和节点的key)
   // 3.1 比较标签属性
   patchProps(el, oldVNode.data, vnode.data)
+
+  // 3.2 节点比较完，就需要比较两个节点的儿子
+  let oldChildren = oldVNode.children || []
+  let newChildren = vnode.children || []
+
+  // 3.2.1 新老节点都有儿子
+  if (oldChildren.length > 0 && newChildren.length > 0) {
+    // diff算法核心！！！
+    updateChildren(el, oldChildren, newChildren)
+  }
+}
+
+function updateChildren(el, oldChildren, newChildren) {
+  let oldStartIndex = 0
+  let newStartIndex = 0
+  let oldEndIndex = oldChildren.length - 1
+  let newEndIndex = newChildren.length - 1
+
+  let oldStartVnode = oldChildren[0]
+  let newStartVnode = newChildren[0]
+
+  let oldEndVnode = oldChildren[oldEndIndex]
+  let newEndVnode = newChildren[newEndIndex]
+
+  while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+    if (isSameVnode(oldStartVnode, newStartVnode)) {
+      patchVnode(oldStartVnode, newStartVnode) // 如果是相同节点 则递归比较子节点
+      oldStartVnode = oldChildren[++oldStartIndex]
+      newStartVnode = newChildren[++newStartIndex]
+    }
+  }
 }
