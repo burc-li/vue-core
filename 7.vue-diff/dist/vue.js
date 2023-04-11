@@ -552,6 +552,7 @@
         vnode.el.appendChild(createElm(child));
       });
     } else {
+      // 文本
       vnode.el = document.createTextNode(text);
     }
     return vnode.el;
@@ -624,7 +625,7 @@
     // 3.1 比较标签属性
     patchProps(el, oldVNode.data, vnode.data);
 
-    // 3.2 节点比较完，就需要比较两个节点的儿子
+    // 3.2 比较两个节点的儿子
     let oldChildren = oldVNode.children || [];
     let newChildren = vnode.children || [];
 
@@ -632,6 +633,16 @@
     if (oldChildren.length > 0 && newChildren.length > 0) {
       // diff算法核心！！！
       updateChildren(el, oldChildren, newChildren);
+    }
+    // 3.2.2 新节点有儿子，老节点没有儿子
+    else if (newChildren.length > 0) {
+      mountChildren(el, newChildren);
+    }
+  }
+  function mountChildren(el, newChildren) {
+    for (let i = 0; i < newChildren.length; i++) {
+      let child = newChildren[i];
+      el.appendChild(createElm(child));
     }
   }
   function updateChildren(el, oldChildren, newChildren) {
@@ -1165,9 +1176,16 @@
     // let render1 = compileToFunction(`<h1 key='a'>老节点</h1>`)
     // let render2 = compileToFunction(`<h1 key='b'>新节点</h1>`)
 
-    // 2. 新老节点相同，且是标签，比较标签属性；然后比较孩子（文本孩子）
-    let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60">老节点</h1>`);
-    let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60">新节点</h1>`);
+    // 2. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
+    // 老节点没孩子，新节点有孩子
+    let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60; height: 85px"></h1>`);
+    let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60; height: 85px"><li>1</li><li>2</li></h1>`);
+
+    // X. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
+    // 新老节点都有孩子，（此时孩子是文本）
+    // let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60">老节点</h1>`)
+    // let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60">新节点</h1>`)
+
     return {
       render1,
       render2

@@ -18,6 +18,7 @@ export function createElm(vnode) {
       vnode.el.appendChild(createElm(child))
     })
   } else {
+    // 文本
     vnode.el = document.createTextNode(text)
   }
   return vnode.el
@@ -95,7 +96,7 @@ function patchVnode(oldVNode, vnode) {
   // 3.1 比较标签属性
   patchProps(el, oldVNode.data, vnode.data)
 
-  // 3.2 节点比较完，就需要比较两个节点的儿子
+  // 3.2 比较两个节点的儿子
   let oldChildren = oldVNode.children || []
   let newChildren = vnode.children || []
 
@@ -103,6 +104,17 @@ function patchVnode(oldVNode, vnode) {
   if (oldChildren.length > 0 && newChildren.length > 0) {
     // diff算法核心！！！
     updateChildren(el, oldChildren, newChildren)
+  }
+  // 3.2.2 新节点有儿子，老节点没有儿子
+  else if (newChildren.length > 0) {
+    mountChildren(el, newChildren)
+  }
+}
+
+function mountChildren(el, newChildren) {
+  for (let i = 0; i < newChildren.length; i++) {
+    let child = newChildren[i]
+    el.appendChild(createElm(child))
   }
 }
 
