@@ -137,11 +137,22 @@ function updateChildren(el, oldChildren, newChildren) {
   let oldEndVnode = oldChildren[oldEndIndex]
   let newEndVnode = newChildren[newEndIndex]
 
+  // 双方有一方头指针大于尾部指针，则停止循环
   while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
     if (isSameVnode(oldStartVnode, newStartVnode)) {
       patchVnode(oldStartVnode, newStartVnode) // 如果是相同节点 则递归比较子节点
       oldStartVnode = oldChildren[++oldStartIndex]
       newStartVnode = newChildren[++newStartIndex]
+    }
+  }
+
+  // 新的节点多了，插入
+  // a b c d
+  // a b c d e f
+  if (newStartIndex <= newEndIndex) {
+    for (let i = newStartIndex; i <= newEndIndex; i++) {
+      let childEl = createElm(newChildren[i])
+      el.appendChild(childEl)
     }
   }
 }
