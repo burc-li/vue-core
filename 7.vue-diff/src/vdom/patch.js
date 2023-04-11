@@ -82,14 +82,16 @@ function patchVnode(oldVNode, vnode) {
     return el
   }
 
-  // 2. 新老节点相同
-  // 2.1 是文本，比较文本内容
   let el = (vnode.el = oldVNode.el) // 复用老节点的元素
-  if (!oldVNode.tag) {
-    if (oldVNode.text !== vnode.text) {
-      el.textContent = vnode.text // 用新的文本覆盖掉老的
-    }
-  }
-  // 2.2 是标签，比较标签属性
+
+  // 2. 新老节点相同，且是文本 (判断节点的tag和节点的key)，比较文本内容
+  // if (!oldVNode.tag) {
+  //   if (oldVNode.text !== vnode.text) {
+  //     el.textContent = vnode.text // 用新的文本覆盖掉老的
+  //   }
+  // }
+
+  // 3. 新老节点相同，且是标签 (判断节点的tag和节点的key)
+  // 3.1 比较标签属性
   patchProps(el, oldVNode.data, vnode.data)
 }

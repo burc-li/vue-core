@@ -5,7 +5,7 @@ import { initMixin } from './init'
 import { initLifeCycle } from './lifecycle'
 import { initStateMixin } from './state'
 import { initGlobalAPI } from './gloablAPI'
-import { diffDemo } from './examples/diff_02'
+import { diffDemo } from './examples/diff'
 
 // 通过构造函数扩展方法
 function Vue(options) {

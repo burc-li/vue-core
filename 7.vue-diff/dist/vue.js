@@ -611,16 +611,17 @@
       oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
       return el;
     }
-
-    // 2. 新老节点相同
-    // 2.1 是文本，比较文本内容
     let el = vnode.el = oldVNode.el; // 复用老节点的元素
-    if (!oldVNode.tag) {
-      if (oldVNode.text !== vnode.text) {
-        el.textContent = vnode.text; // 用新的文本覆盖掉老的
-      }
-    }
-    // 2.2 是标签，比较标签属性
+
+    // 2. 新老节点相同，且是文本 (判断节点的tag和节点的key)，比较文本内容
+    // if (!oldVNode.tag) {
+    //   if (oldVNode.text !== vnode.text) {
+    //     el.textContent = vnode.text // 用新的文本覆盖掉老的
+    //   }
+    // }
+
+    // 3. 新老节点相同，且是标签 (判断节点的tag和节点的key)
+    // 3.1 比较标签属性
     patchProps(el, oldVNode.data, vnode.data);
   }
 
@@ -1132,10 +1133,22 @@
   }
 
   // ------------- 为了方便观察前后的虚拟节点--测试的-----------------
+  const renderMap = function () {
+    // 1. 新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
+    // let render1 = compileToFunction(`<h1 key='a'>老节点</h1>`)
+    // let render2 = compileToFunction(`<h1 key='b'>新节点</h1>`)
 
-  // 新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
-  const diffDemo = function () {
+    // 2. 新老节点相同，且是文本 (判断节点的tag和节点的key)，比较文本内容
+    // 3. 新老节点相同，且是标签 (判断节点的tag和节点的key)，比较标签属性
     let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60">老节点</h1>`);
+    let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60">新节点</h1>`);
+    return {
+      render1,
+      render2
+    };
+  };
+  const diffDemo = function () {
+    let render1 = renderMap().render1;
     let vm1 = new Vue({
       data: {
         name: 'burc'
@@ -1144,7 +1157,7 @@
     let prevVnode = render1.call(vm1);
     let el = createElm(prevVnode);
     document.body.appendChild(el);
-    let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60">新节点</h1>`);
+    let render2 = renderMap().render2;
     let vm2 = new Vue({
       data: {
         name: 'burc'
