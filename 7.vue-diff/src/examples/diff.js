@@ -151,21 +151,40 @@ const renderMap = function () {
   // 5.7 双端比较_3 or 双端比较_4 - 倒序
   // a b c d e
   // e d c b a
-  let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-      <li key="a">a</li>
-      <li key="b">b</li>
-      <li key="c">c</li>
-      <li key="d">d</li>
-      <li key="e">e</li>
-    </ul>`,
-  )
-  let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-      <li key="e">e</li>
-      <li key="d">d</li>
-      <li key="c">c</li>
-      <li key="b">b</li>
-      <li key="a">a</li>
-    </ul>`)
+  // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //     <li key="e">e</li>
+  //   </ul>`,
+  // )
+  // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+  //     <li key="e">e</li>
+  //     <li key="d">d</li>
+  //     <li key="c">c</li>
+  //     <li key="b">b</li>
+  //     <li key="a">a</li>
+  //   </ul>`)
+
+  // 5.8 乱序比对
+  // a b c d e
+  // e d c b a
+  // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //     <li key="e">e</li>
+  //   </ul>`,
+  // )
+  // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+  //     <li key="e">e</li>
+  //     <li key="d">d</li>
+  //     <li key="c">c</li>
+  //     <li key="b">b</li>
+  //     <li key="a">a</li>
+  //   </ul>`)
 
 
 

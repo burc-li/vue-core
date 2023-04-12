@@ -137,8 +137,27 @@ function updateChildren(el, oldChildren, newChildren) {
   let oldEndVnode = oldChildren[oldEndIndex]
   let newEndVnode = newChildren[newEndIndex]
 
+  function makeIndexByKey(children) {
+    let map = {}
+    children.forEach((child, index) => {
+      map[child.key] = index
+    })
+    return map
+  }
+  // 旧孩子映射表(key-index)，用于乱序比对
+  let map = makeIndexByKey(oldChildren)
+
   // 双方有一方头指针大于尾部指针，则停止循环
   while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+    if (!oldStartVnode) {
+      oldStartVnode = oldChildren[++oldStartIndex]
+      continue
+    }
+    if (!oldEndVnode) {
+      oldEndVnode = oldChildren[--oldEndIndex]
+      continue
+    }
+
     // 双端比较_1 - 旧孩子的头 比对 新孩子的头；
     // 都从头部开始比对（对应场景：同序列尾部挂载-push、同序列尾部卸载-pop）
     if (isSameVnode(oldStartVnode, newStartVnode)) {
@@ -167,6 +186,24 @@ function updateChildren(el, oldChildren, newChildren) {
       patchVnode(oldEndVnode, newStartVnode)
       el.insertBefore(oldEndVnode.el, oldStartVnode.el) // 将 oldEndVnode 移动到 oldStartVnode的前面（把当前节点 移动到 旧列表头指针指向的节点 前面）
       oldEndVnode = oldChildren[--oldEndIndex]
+      newStartVnode = newChildren[++newStartIndex]
+    }
+    // 乱序比对
+    // 根据旧的列表做一个映射关系，拿新的节点去找，找到则移动；找不到则添加；最后删除多余的旧节点
+    else {
+      let moveIndex = map[newStartVnode.key]
+      // 找的到相同的老节点
+      if (moveIndex !== undefined) {
+        let moveVnode = oldChildren[moveIndex] // 复用旧的节点
+        el.insertBefore(moveVnode.el, oldStartVnode.el) // 将 moveVnode 移动到 oldStartVnode的前面（把复用节点 移动到 旧列表头指针指向的节点 前面）
+        oldChildren[moveIndex] = undefined // 表示这个旧节点已经被移动过了
+        patchVnode(moveVnode, newStartVnode) // 比对属性和子节点
+      } 
+      // 找不到相同的老节点
+      else {
+        
+        el.insertBefore(createElm(newStartVnode), oldStartVnode.el) // 将 创建的节点 移动到 oldStartVnode的前面（把创建的节点 移动到 旧列表头指针指向的节点 前面）
+      }
       newStartVnode = newChildren[++newStartIndex]
     }
   }
