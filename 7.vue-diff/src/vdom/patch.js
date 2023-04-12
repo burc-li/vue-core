@@ -1,12 +1,12 @@
 /**
  * @name patch比对 - 核心就是diff算法
  * @desc diff算法是一个平级比较的过程，父亲和父亲比对，儿子和儿子比对
- * @todo 1、新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
- * @todo 2、两个节点是同一个节点 (判断节点的tag和节点的key) ，比较两个节点的属性是否有差异（复用老的节点，将差异的属性更新）
+ * @todo 1、新旧节点不相同（判断节点的tag和节点的key），直接用新节点替换旧节点，无需比对
+ * @todo 2、两个节点是同一个节点 (判断节点的tag和节点的key) ，比较两个节点的属性是否有差异（复用旧的节点，将差异的属性更新）
  * @todo 3、节点比较完毕后，,需要比较两个节点的儿子
- * @todo 3.1、新节点有孩子，老节点没有孩子，挂载
- * @todo 3.2、老节点有孩子，新节点没有孩子，删除
- * @todo 3.3、新老节点都有孩子 - diff核心算法
+ * @todo 3.1、新节点有孩子，旧节点没有孩子，挂载
+ * @todo 3.2、旧节点有孩子，新节点没有孩子，删除
+ * @todo 3.3、新旧节点都有孩子 - diff核心算法
  */
 import { isSameVnode } from './index'
 
@@ -29,18 +29,18 @@ export function createElm(vnode) {
 
 // 对比属性打补丁
 export function patchProps(el, oldProps = {}, props = {}) {
-  // 老的属性中有，新的没有  要删除老的
+  // 旧的属性中有，新的没有  要删除旧的
   let oldStyles = oldProps.style || {}
   let newStyles = props.style || {}
 
   for (let key in oldStyles) {
-    // 老的样式中有，新的没有，则删除
+    // 旧的样式中有，新的没有，则删除
     if (!newStyles[key]) {
       el.style[key] = ''
     }
   }
   for (let key in oldProps) {
-    // 老的属性中有，新的没有，则删除
+    // 旧的属性中有，新的没有，则删除
     if (!props[key]) {
       el.removeAttribute(key)
     }
@@ -69,7 +69,7 @@ export function patch(oldVNode, vnode) {
     console.log('利用vnode创建真实元素\n', newElm, parentElm)
 
     parentElm.insertBefore(newElm, elm.nextSibling)
-    parentElm.removeChild(elm) // 删除老节点
+    parentElm.removeChild(elm) // 删除旧节点
 
     return newElm
   } else {
@@ -79,7 +79,7 @@ export function patch(oldVNode, vnode) {
 }
 
 function patchVnode(oldVNode, vnode) {
-  // 1. 新老节点不相同（判断节点的tag和节点的key），直接用新节点替换老节点，无需比对
+  // 1. 新旧节点不相同（判断节点的tag和节点的key），直接用新节点替换旧节点，无需比对
   if (!isSameVnode(oldVNode, vnode)) {
     let el = createElm(vnode)
     oldVNode.el.parentNode.replaceChild(el, oldVNode.el)
@@ -87,30 +87,30 @@ function patchVnode(oldVNode, vnode) {
   }
   let el = (vnode.el = oldVNode.el)
 
-  // 2. 新老节点相同，且是文本 (判断节点的tag和节点的key)，比较文本内容
+  // 2. 新旧节点相同，且是文本 (判断节点的tag和节点的key)，比较文本内容
   if (!oldVNode.tag) {
     if (oldVNode.text !== vnode.text) {
-      el.textContent = vnode.text // 用新的文本覆盖掉老的
+      el.textContent = vnode.text // 用新的文本覆盖掉旧的
     }
   }
 
-  // 3. 新老节点相同，且是标签 (判断节点的tag和节点的key)
+  // 3. 新旧节点相同，且是标签 (判断节点的tag和节点的key)
   // 3.1 比较标签属性
   patchProps(el, oldVNode.data, vnode.data)
 
   let oldChildren = oldVNode.children || []
   let newChildren = vnode.children || []
   // 3.2 比较两个节点的儿子
-  // 3.2.1 新老节点都有儿子
+  // 3.2.1 新旧节点都有儿子
   if (oldChildren.length > 0 && newChildren.length > 0) {
     // diff算法核心！！！
     updateChildren(el, oldChildren, newChildren)
   }
-  // 3.2.2 新节点有儿子，老节点没有儿子，挂载
+  // 3.2.2 新节点有儿子，旧节点没有儿子，挂载
   else if (newChildren.length > 0) {
     mountChildren(el, newChildren)
   }
-  // 3.2.3 老节点有儿子，新节点没有儿子，删除
+  // 3.2.3 旧节点有儿子，新节点没有儿子，删除
   else if (oldChildren.length > 0) {
     el.innerHTML = ''
   }
@@ -139,38 +139,42 @@ function updateChildren(el, oldChildren, newChildren) {
 
   // 双方有一方头指针大于尾部指针，则停止循环
   while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-    // 从头部开始比对（同序列尾部挂载、同序列尾部卸载）
+    // 双端比较_1 - 旧孩子的头 比对 新孩子的头；
+    // 都从头部开始比对（对应场景：同序列尾部挂载-push、同序列尾部卸载-pop）
     if (isSameVnode(oldStartVnode, newStartVnode)) {
-      patchVnode(oldStartVnode, newStartVnode) // 如果是相同节点 则递归比较子节点
+      patchVnode(oldStartVnode, newStartVnode) // 如果是相同节点，则打补丁，并递归比较子节点
       oldStartVnode = oldChildren[++oldStartIndex]
       newStartVnode = newChildren[++newStartIndex]
     }
-    // 从尾部开始比对（同序列头部挂载、同序列头部卸载）
+    // 双端比较_2 - 旧孩子的尾 比对 新孩子的尾；
+    // 都从尾部开始比对（对应场景：同序列头部挂载-unshift、同序列头部卸载-shift）
     else if (isSameVnode(oldEndVnode, newEndVnode)) {
-      patchVnode(oldEndVnode, newEndVnode) // 如果是相同节点 则递归比较子节点
+      patchVnode(oldEndVnode, newEndVnode) // 如果是相同节点，则打补丁，并递归比较子节点
       oldEndVnode = oldChildren[--oldEndIndex]
       newEndVnode = newChildren[--newEndIndex]
     }
-    // 老孩子的尾 比对 新孩子的头
-    else if (isSameVnode(oldEndVnode, newStartVnode)) {
-      patchVnode(oldEndVnode, newStartVnode)
-      el.insertBefore(oldEndVnode.el, oldStartVnode.el) // 将老孩子的尾巴 移动到 老孩子开始节点的前面
-      oldEndVnode = oldChildren[--oldEndIndex]
-      newStartVnode = newChildren[++newStartIndex]
-    }
-    // 老孩子的头 比对 新孩子的尾
+    // 双端比较_3 - 旧孩子的头 比对 新孩子的尾；
+    // 旧孩子从头部开始，新孩子从尾部开始（对应场景：指针尽可能向内靠拢；极端场景-reverse）
     else if (isSameVnode(oldStartVnode, newEndVnode)) {
       patchVnode(oldStartVnode, newEndVnode)
-      el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling) // 将老的尾巴移动到老的前面去
+      el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling) // 将 oldStartVnode 移动到 oldEndVnode的后面（把当前节点 移动到 旧列表尾指针指向的节点 后面）
       oldStartVnode = oldChildren[++oldStartIndex]
       newEndVnode = newChildren[--newEndIndex]
+    }
+    // 双端比较_4 - 旧孩子的尾 比对 新孩子的头；
+    // 旧孩子从尾部开始，新孩子从头部开始（对应场景：指针尽可能向内靠拢；极端场景-reverse）
+    else if (isSameVnode(oldEndVnode, newStartVnode)) {
+      patchVnode(oldEndVnode, newStartVnode)
+      el.insertBefore(oldEndVnode.el, oldStartVnode.el) // 将 oldEndVnode 移动到 oldStartVnode的前面（把当前节点 移动到 旧列表头指针指向的节点 前面）
+      oldEndVnode = oldChildren[--oldEndIndex]
+      newStartVnode = newChildren[++newStartIndex]
     }
   }
 
-  // 1. 同序列尾部挂载，向后追加
+  // 同序列尾部挂载，向后追加
   // a b c d
   // a b c d e f
-  // 2. 同序列头部挂载，向前追加
+  // 同序列头部挂载，向前追加
   //     a b c d
   // e f a b c d
   if (newStartIndex <= newEndIndex) {
@@ -183,10 +187,10 @@ function updateChildren(el, oldChildren, newChildren) {
     }
   }
 
-  // 3. 同序列尾部卸载，删除尾部多余的老孩子
+  // 同序列尾部卸载，删除尾部多余的旧孩子
   // a b c d e f
   // a b c d
-  // 4. 同序列头部卸载，删除头部多余的老孩子
+  // 同序列头部卸载，删除头部多余的旧孩子
   // e f a b c d
   //     a b c d
   if (oldStartIndex <= oldEndIndex) {
