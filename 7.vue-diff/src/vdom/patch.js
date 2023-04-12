@@ -153,10 +153,10 @@ function updateChildren(el, oldChildren, newChildren) {
     }
   }
 
-  // 同序列尾部挂载，向后追加
+  // 1. 同序列尾部挂载，向后追加
   // a b c d
   // a b c d e f
-  // 同序列头部挂载，向前追加
+  // 2. 同序列头部挂载，向前追加
   //     a b c d
   // e f a b c d
   if (newStartIndex <= newEndIndex) {
@@ -169,10 +169,10 @@ function updateChildren(el, oldChildren, newChildren) {
     }
   }
 
-  // 同序列尾部卸载，删除尾部多余的老孩子
+  // 3. 同序列尾部卸载，删除尾部多余的老孩子
   // a b c d e f
   // a b c d
-  // 同序列头部卸载，删除头部多余的老孩子
+  // 4. 同序列头部卸载，删除头部多余的老孩子
   // e f a b c d
   //     a b c d
   if (oldStartIndex <= oldEndIndex) {

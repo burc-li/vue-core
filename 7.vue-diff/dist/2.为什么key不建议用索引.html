@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <div id="app">
+    <div>
+      <li v-for="(a,index) in arr" :key="index">
+        {{a}} <input type="checkbox">
+      </li>
+    </div>
+    <button @click="append">追加</button>
+  </div>
+  <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.14/vue.js"></script>
+  <script>
+    // 先给 帕萨特 打钩，后点击 追加按钮
+    // 帕萨特(key=0) 凯美瑞(key=1) 亚洲龙(key=2)
+    // 汉dmi(key=0) 帕萨特(key=1) 凯美瑞(key=2) 亚洲龙(key=3)
+    let vm = new Vue({
+      el: '#app',
+      data() {
+        return {
+          arr: ['帕萨特', '凯美瑞', '亚洲龙']
+        }
+      },
+      methods: {
+        append() {
+          this.arr.unshift('汉dmi');
+        }
+      }
+    })
+  </script>
+</body>
+
+</html>
