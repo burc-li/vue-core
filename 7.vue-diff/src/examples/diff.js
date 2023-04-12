@@ -33,9 +33,69 @@ const renderMap = function () {
   // let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60">新节点</h1>`)
 
   // 5. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子，新老节点都有孩子
+  // 5.1 同序列尾部挂载
   // a b c d
   // a b c d e f
+  // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //   </ul>`,
+  // )
+  // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //     <li key="e">e</li>
+  //     <li key="f">f</li>
+  //   </ul>`)
+
+  // 5.2 同序列头部挂载
+  //     a b c d
+  // e f a b c d
+  // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //   </ul>`,
+  // )
+  // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+  //     <li key="e">e</li>
+  //     <li key="f">f</li>
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //   </ul>`)
+
+  // 5.3 同序列尾部卸载
+  // a b c d e f
+  // a b c d
+  // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //     <li key="e">e</li>
+  //     <li key="f">f</li>
+  //   </ul>`,
+  // )
+  // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //   </ul>`)
+
+  // 5.4 同序列头部卸载
+  // e f a b c d
+  //     a b c d
   let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+      <li key="e">e</li>
+      <li key="f">f</li>
       <li key="a">a</li>
       <li key="b">b</li>
       <li key="c">c</li>
@@ -47,8 +107,6 @@ const renderMap = function () {
       <li key="b">b</li>
       <li key="c">c</li>
       <li key="d">d</li>
-      <li key="e">e</li>
-      <li key="f">f</li>
     </ul>`)
 
   return {

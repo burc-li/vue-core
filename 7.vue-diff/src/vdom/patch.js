@@ -139,20 +139,48 @@ function updateChildren(el, oldChildren, newChildren) {
 
   // 双方有一方头指针大于尾部指针，则停止循环
   while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+    // 从头部开始比对
     if (isSameVnode(oldStartVnode, newStartVnode)) {
       patchVnode(oldStartVnode, newStartVnode) // 如果是相同节点 则递归比较子节点
       oldStartVnode = oldChildren[++oldStartIndex]
       newStartVnode = newChildren[++newStartIndex]
     }
+    // 从尾部开始比对
+    else if (isSameVnode(oldEndVnode, newEndVnode)) {
+      patchVnode(oldEndVnode, newEndVnode) // 如果是相同节点 则递归比较子节点
+      oldEndVnode = oldChildren[--oldEndIndex]
+      newEndVnode = newChildren[--newEndIndex]
+    }
   }
 
-  // 新的节点多了，插入
+  // 同序列尾部挂载，向后追加
   // a b c d
   // a b c d e f
+  // 同序列头部挂载，向前追加
+  //     a b c d
+  // e f a b c d
   if (newStartIndex <= newEndIndex) {
     for (let i = newStartIndex; i <= newEndIndex; i++) {
       let childEl = createElm(newChildren[i])
-      el.appendChild(childEl)
+      // 这里可能是向后追加 ，也可能是向前追加
+      let anchor = newChildren[newEndIndex + 1] ? newChildren[newEndIndex + 1].el : null // 获取下一个元素
+      // el.appendChild(childEl);
+      el.insertBefore(childEl, anchor) // anchor为null的时候等同于 appendChild
+    }
+  }
+
+  // 同序列尾部卸载，删除尾部多余的老孩子
+  // a b c d e f
+  // a b c d
+  // 同序列头部卸载，删除头部多余的老孩子
+  // e f a b c d
+  //     a b c d
+  if (oldStartIndex <= oldEndIndex) {
+    for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+      if (oldChildren[i]) {
+        let childEl = oldChildren[i].el
+        el.removeChild(childEl)
+      }
     }
   }
 }

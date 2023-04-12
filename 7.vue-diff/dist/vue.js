@@ -661,25 +661,53 @@
     let newEndIndex = newChildren.length - 1;
     let oldStartVnode = oldChildren[0];
     let newStartVnode = newChildren[0];
-    oldChildren[oldEndIndex];
-    newChildren[newEndIndex];
+    let oldEndVnode = oldChildren[oldEndIndex];
+    let newEndVnode = newChildren[newEndIndex];
 
     // 双方有一方头指针大于尾部指针，则停止循环
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+      // 从头部开始比对
       if (isSameVnode(oldStartVnode, newStartVnode)) {
         patchVnode(oldStartVnode, newStartVnode); // 如果是相同节点 则递归比较子节点
         oldStartVnode = oldChildren[++oldStartIndex];
         newStartVnode = newChildren[++newStartIndex];
       }
+      // 从尾部开始比对
+      else if (isSameVnode(oldEndVnode, newEndVnode)) {
+        patchVnode(oldEndVnode, newEndVnode); // 如果是相同节点 则递归比较子节点
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      }
     }
 
-    // 新的节点多了，插入
+    // 同序列尾部挂载，向后追加
     // a b c d
     // a b c d e f
+    // 同序列头部挂载，向前追加
+    //     a b c d
+    // e f a b c d
     if (newStartIndex <= newEndIndex) {
       for (let i = newStartIndex; i <= newEndIndex; i++) {
         let childEl = createElm(newChildren[i]);
-        el.appendChild(childEl);
+        // 这里可能是向后追加 ，也可能是向前追加
+        let anchor = newChildren[newEndIndex + 1] ? newChildren[newEndIndex + 1].el : null; // 获取下一个元素
+        // el.appendChild(childEl);
+        el.insertBefore(childEl, anchor); // anchor为null的时候等同于 appendChild
+      }
+    }
+
+    // 同序列尾部卸载，删除尾部多余的老孩子
+    // a b c d e f
+    // a b c d
+    // 同序列头部卸载，删除头部多余的老孩子
+    // e f a b c d
+    //     a b c d
+    if (oldStartIndex <= oldEndIndex) {
+      for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+        if (oldChildren[i]) {
+          let childEl = oldChildren[i].el;
+          el.removeChild(childEl);
+        }
       }
     }
   }
@@ -1217,9 +1245,69 @@
     // let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60">新节点</h1>`)
 
     // 5. 新老节点相同，且是标签，比较标签属性；然后比较两个节点的孩子，新老节点都有孩子
+    // 5.1 同序列尾部挂载
     // a b c d
     // a b c d e f
+    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //   </ul>`,
+    // )
+    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //     <li key="e">e</li>
+    //     <li key="f">f</li>
+    //   </ul>`)
+
+    // 5.2 同序列头部挂载
+    //     a b c d
+    // e f a b c d
+    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //   </ul>`,
+    // )
+    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+    //     <li key="e">e</li>
+    //     <li key="f">f</li>
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //   </ul>`)
+
+    // 5.3 同序列尾部卸载
+    // a b c d e f
+    // a b c d
+    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //     <li key="e">e</li>
+    //     <li key="f">f</li>
+    //   </ul>`,
+    // )
+    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //   </ul>`)
+
+    // 5.4 同序列头部卸载
+    // e f a b c d
+    //     a b c d
     let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+      <li key="e">e</li>
+      <li key="f">f</li>
       <li key="a">a</li>
       <li key="b">b</li>
       <li key="c">c</li>
@@ -1230,8 +1318,6 @@
       <li key="b">b</li>
       <li key="c">c</li>
       <li key="d">d</li>
-      <li key="e">e</li>
-      <li key="f">f</li>
     </ul>`);
     return {
       render1,
