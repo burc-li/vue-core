@@ -1433,24 +1433,28 @@
     //   </ul>`)
 
     // 5.8 乱序比对
-    // a b c d e
-    // e d c b a
-    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //     <li key="e">e</li>
-    //   </ul>`,
-    // )
-    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="e">e</li>
-    //     <li key="d">d</li>
-    //     <li key="c">c</li>
-    //     <li key="b">b</li>
-    //     <li key="a">a</li>
-    //   </ul>`)
-
+    // v w a b c j m n
+    // v w c b a h m n
+    let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+      <li key="v">v</li>
+      <li key="w">w</li>
+      <li key="a">a</li>
+      <li key="b">b</li>
+      <li key="c">c</li>
+      <li key="j">j</li>
+      <li key="m">m</li>
+      <li key="n">n</li>
+    </ul>`);
+    let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+      <li key="v">v</li>
+      <li key="w">w</li>
+      <li key="c">c</li>
+      <li key="b">b</li>
+      <li key="a">a</li>
+      <li key="h">h</li>
+      <li key="m">m</li>
+      <li key="n">n</li>
+    </ul>`);
     return {
       render1,
       render2
