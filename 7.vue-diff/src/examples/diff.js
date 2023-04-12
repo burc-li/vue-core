@@ -93,21 +93,64 @@ const renderMap = function () {
   // 5.4 同序列头部卸载
   // e f a b c d
   //     a b c d
+  // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+  //     <li key="e">e</li>
+  //     <li key="f">f</li>
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //   </ul>`,
+  // )
+  // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //   </ul>`)
+
+  // 5.5 老孩子的尾 比对 新孩子的头
+  // a b c d e
+  // e d a b c
+  // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //     <li key="d">d</li>
+  //     <li key="e">e</li>
+  //   </ul>`,
+  // )
+  // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+  //     <li key="e">e</li>
+  //     <li key="d">d</li>
+  //     <li key="a">a</li>
+  //     <li key="b">b</li>
+  //     <li key="c">c</li>
+  //   </ul>`)
+
+  // 5.5 老孩子的头 比对 新孩子的尾
+  // a b c d e
+  // c d e b a
   let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-      <li key="e">e</li>
-      <li key="f">f</li>
       <li key="a">a</li>
       <li key="b">b</li>
       <li key="c">c</li>
       <li key="d">d</li>
+      <li key="e">e</li>
     </ul>`,
   )
   let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-      <li key="a">a</li>
-      <li key="b">b</li>
       <li key="c">c</li>
       <li key="d">d</li>
+      <li key="e">e</li>
+      <li key="b">b</li>
+      <li key="a">a</li>
     </ul>`)
+
+
+
+
+
 
   return {
     render1,

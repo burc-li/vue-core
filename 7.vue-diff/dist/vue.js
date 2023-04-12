@@ -666,16 +666,30 @@
 
     // 双方有一方头指针大于尾部指针，则停止循环
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-      // 从头部开始比对
+      // 从头部开始比对（同序列尾部挂载、同序列尾部卸载）
       if (isSameVnode(oldStartVnode, newStartVnode)) {
         patchVnode(oldStartVnode, newStartVnode); // 如果是相同节点 则递归比较子节点
         oldStartVnode = oldChildren[++oldStartIndex];
         newStartVnode = newChildren[++newStartIndex];
       }
-      // 从尾部开始比对
+      // 从尾部开始比对（同序列头部挂载、同序列头部卸载）
       else if (isSameVnode(oldEndVnode, newEndVnode)) {
         patchVnode(oldEndVnode, newEndVnode); // 如果是相同节点 则递归比较子节点
         oldEndVnode = oldChildren[--oldEndIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      }
+      // 老孩子的尾 比对 新孩子的头
+      else if (isSameVnode(oldEndVnode, newStartVnode)) {
+        patchVnode(oldEndVnode, newStartVnode);
+        el.insertBefore(oldEndVnode.el, oldStartVnode.el); // 将老孩子的尾巴 移动到 老孩子开始节点的前面
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      }
+      // 老孩子的头 比对 新孩子的尾
+      else if (isSameVnode(oldStartVnode, newEndVnode)) {
+        patchVnode(oldStartVnode, newEndVnode);
+        el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling); // 将老的尾巴移动到老的前面去
+        oldStartVnode = oldChildren[++oldStartIndex];
         newEndVnode = newChildren[--newEndIndex];
       }
     }
@@ -1305,19 +1319,57 @@
     // 5.4 同序列头部卸载
     // e f a b c d
     //     a b c d
+    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+    //     <li key="e">e</li>
+    //     <li key="f">f</li>
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //   </ul>`,
+    // )
+    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //   </ul>`)
+
+    // 5.5 老孩子的尾 比对 新孩子的头
+    // a b c d e
+    // e d a b c
+    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //     <li key="e">e</li>
+    //   </ul>`,
+    // )
+    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+    //     <li key="e">e</li>
+    //     <li key="d">d</li>
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //   </ul>`)
+
+    // 5.5 老孩子的头 比对 新孩子的尾
+    // a b c d e
+    // c d e b a
     let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-      <li key="e">e</li>
-      <li key="f">f</li>
       <li key="a">a</li>
       <li key="b">b</li>
       <li key="c">c</li>
       <li key="d">d</li>
+      <li key="e">e</li>
     </ul>`);
     let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-      <li key="a">a</li>
-      <li key="b">b</li>
       <li key="c">c</li>
       <li key="d">d</li>
+      <li key="e">e</li>
+      <li key="b">b</li>
+      <li key="a">a</li>
     </ul>`);
     return {
       render1,
