@@ -201,7 +201,6 @@ function updateChildren(el, oldChildren, newChildren) {
       } 
       // 找不到相同的老节点
       else {
-        
         el.insertBefore(createElm(newStartVnode), oldStartVnode.el) // 将 创建的节点 移动到 oldStartVnode的前面（把创建的节点 移动到 旧列表头指针指向的节点 前面）
       }
       newStartVnode = newChildren[++newStartIndex]

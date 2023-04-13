@@ -1,45 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-  </head>
-  <body>
-    <script src="vue.js"></script>
-    <script>
-      // 响应式的数据变化， 数据变化了我可以监控到数据的变化
-      // 数据的取值 和 更改值我们要监控到
-      const vm = new Vue({
-        data() {
-          return {
-            name: 'zf',
-            age: 20,
-            address: {
-              num: 30,
-              content: '回龙观',
-            },
-            hobby: ['eat', 'drink', [1, 2, 3]],
-          }
-        },
-      })
 
-      vm.name = 1
-      console.log('vm', vm)
-      // vm.hobby.push(4)
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+</head>
 
-      // vm.name = 'ok' // 修改触发set
-      // vm.address = {
-      //   num: 20,
-      // }
+<body>
+  <script src="vue.js"></script>
+  <script>
+    // 响应式的数据变化， 数据变化了我可以监控到数据的变化
+    // 数据的取值 和 更改值我们要监控到
+    const vm = new Vue({
+      data() {
+        return {
+          name: 'zf',
+          age: 20,
+          address: {
+            num: 30,
+            content: '回龙观',
+          },
+          hobby: ['eat', 'drink', [1, 2, 3]],
+        }
+      },
+    })
 
-      // 修改数组 很少用索引来操作数组, 因为 [9999]写代码，但是内部做劫持会浪费性能
-      // 用户一般修改数组 都是通过方法来修改 push shift ...
+    // vm.name = 1
+    // console.log('vm', vm)
 
-      // vm.hobby.unshift({ a: 1 })
-      // console.log(vm.hobby)
-      // vm.hobby[0].a // 也要被劫持到
-    </script>
-  </body>
+    console.log('vm', vm.address.num)
+
+    // vm.hobby.push(4)
+
+    // vm.name = 'ok' // 修改触发set
+    // vm.address = {
+    //   num: 20,
+    // }
+
+    // 修改数组 很少用索引来操作数组, 因为 [9999]写代码，但是内部做劫持会浪费性能
+    // 用户一般修改数组 都是通过方法来修改 push shift ...
+
+    // vm.hobby.unshift({ a: 1 })
+    // console.log(vm.hobby)
+    // vm.hobby[0].a // 也要被劫持到
+  </script>
+</body>
+
 </html>

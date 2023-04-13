@@ -52,12 +52,12 @@ export function defineReactive(target, key, value) {
   Object.defineProperty(target, key, {
     // 取值的时候 会执行get
     get() {
-      console.log('get_v2')
+      console.log('get_v2', key)
       return value
     },
     // 修改的时候 会执行set
     set(newValue) {
-      console.log('set_v2')
+      console.log('set_v2', key)
       if (newValue === value) return
 
       // 修改属性之后重新观测，目的：新值为对象或数组的话，可以劫持其数据
