@@ -22,19 +22,20 @@ export function createElementVNode(vm, tag, data, ...children) {
   }
   // 是组件
   else {
-    let Ctor = vm.$options.components[tag] // Ctor就是组件的定义 可能是一个Sub类，也可能是对象
+    let Ctor = vm.$options.components[tag] // Ctor就是组件的定义 可能是一个Sub类，也可能是组件选项对象
     return createComponentVnode(vm, tag, key, data, children, Ctor)
   }
 }
 
 function createComponentVnode(vm, tag, key, data, children, Ctor) {
   if (typeof Ctor === 'object') {
-    Ctor = vm.$options._base.extend(Ctor) // 即 Vue.extend(Ctor) ？？？ _base要挂载到Vue.options上 ！ vm.constructor.extend = Vue.extend or Sub.prototype.extend(即Vue.prototype.extend)
+    Ctor = vm.$options._base.extend(Ctor) // 即 Vue.extend(Ctor) 返回一个 Sub构造函数
   }
   data.hook = {
-    init(vnode) { // 稍后创造真实节点的时候 如果是组件则调用此init方法
-      let instance = (vnode.componentInstance = new vnode.componentOptions.Ctor())  // 保存组件的实例到虚拟节点上
-      instance.$mount() // instance.$el
+    // 稍后创造真实节点时，如果时组件则会在 createComponent 调用 init方法
+    init(vnode) { 
+      vnode.componentInstance = new vnode.componentOptions.Ctor()  // 缓存 Sub实例 到组件虚拟节点上
+      vnode.componentInstance.$mount() //  给 vm.$el 即 vnode.componentInstance.$el 赋值。 mountComponent -》 vm._update -》 vm.$el = patch(el, vnode) -》 el 为 null 走 createElm(vnode) ，vnode就是组件的虚拟节点 —》 返回真实DOM
     },
   }
   return vnode(vm, tag, key, data, children, null, { Ctor })

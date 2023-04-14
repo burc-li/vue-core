@@ -44,7 +44,6 @@ export function initLifeCycle(Vue) {
 export function mountComponent(vm, el) {
   // 这里的el 是通过querySelector获取的
   vm.$el = el
-
   const updateComponent = () => {
     // vm._render 创建虚拟DOM
     // vm._update 把 VNode 渲染成真实的DOM

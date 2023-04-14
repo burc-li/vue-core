@@ -14,7 +14,7 @@ import { isSameVnode } from './index'
 function createComponent(vnode) {
   let i = vnode.data
   if ((i = i.hook) && (i = i.init)) {
-    i(vnode) // 初始化组件，data.hook.init
+    i(vnode) // 初始化组件，data.hook.init，在内部执行.$mount()方法时，会把真实DOM缓存到 vnode.componentInstance.$el上
   }
   if (vnode.componentInstance) {
     return true // 说明是组件
@@ -25,18 +25,18 @@ function createComponent(vnode) {
 export function createElm(vnode) {
   let { tag, data, children, text } = vnode
   if (typeof tag === 'string') {
-    // 组件
+    // 1. 组件
     if (createComponent(vnode)) {
-      return vnode.componentInstance.$el
+      return vnode.componentInstance.$el // 真实DOM
     }
-    // 标签
+    // 2. 标签
     vnode.el = document.createElement(tag) // 这里将真实节点和虚拟节点对应起来，后续如果修改属性了
     patchProps(vnode.el, {}, data)
     children.forEach(child => {
       vnode.el.appendChild(createElm(child))
     })
   } else {
-    // 文本
+    // 3. 文本
     vnode.el = document.createTextNode(text)
   }
   return vnode.el
@@ -75,13 +75,13 @@ export function patchProps(el, oldProps = {}, props = {}) {
 
 // patch既有初始化元素的功能 ，又有更新元素的功能
 export function patch(oldVNode, vnode) {
-  // 组件的挂载
+  // 1. oldVNode是undefined，组件的挂载
   if (!oldVNode) {
-    return createElm(vnode) // vm.$el  对应的就是组件渲染的结果了
+    return createElm(vnode) // vm.$el 对应的就是组件渲染的结果了
   }
 
-  // 写的是初渲染流程
   const isRealElement = oldVNode.nodeType
+  // 2. oldVNode是真实元素，初渲染流程
   if (isRealElement) {
     const elm = oldVNode // 获取真实元素
     const parentElm = elm.parentNode // 拿到父元素
@@ -92,8 +92,9 @@ export function patch(oldVNode, vnode) {
     parentElm.removeChild(elm) // 删除旧节点
 
     return newElm
-  } else {
-    // diff 算法
+  } 
+  // 3. oldVNode是虚拟DOM，diff算法
+  else {
     return patchVnode(oldVNode, vnode)
   }
 }
