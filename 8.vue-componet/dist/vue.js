@@ -1306,12 +1306,12 @@
       if (!ops.render) {
         let template;
         // 没有render函数，看一下是否写了tempate, 没写template则采用外部的template
-        if (ops.template && el) {
+        if (ops.template) {
           template = ops.template;
         } else if (!ops.template && el) {
           template = el.outerHTML;
         }
-        if (template && el) {
+        if (template) {
           // 这里需要对模板进行编译
           const render = compileToFunction(template);
           ops.render = render; // 最终会被编译成 h('xxx')

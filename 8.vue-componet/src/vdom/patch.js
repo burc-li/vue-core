@@ -10,10 +10,25 @@
  */
 import { isSameVnode } from './index'
 
+// 判断是否是组件
+function createComponent(vnode) {
+  let i = vnode.data
+  if ((i = i.hook) && (i = i.init)) {
+    i(vnode) // 初始化组件，data.hook.init
+  }
+  if (vnode.componentInstance) {
+    return true // 说明是组件
+  }
+}
+
 // 利用vnode创建真实元素
 export function createElm(vnode) {
   let { tag, data, children, text } = vnode
   if (typeof tag === 'string') {
+    // 组件
+    if (createComponent(vnode)) {
+      return vnode.componentInstance.$el
+    }
     // 标签
     vnode.el = document.createElement(tag) // 这里将真实节点和虚拟节点对应起来，后续如果修改属性了
     patchProps(vnode.el, {}, data)
@@ -60,6 +75,11 @@ export function patchProps(el, oldProps = {}, props = {}) {
 
 // patch既有初始化元素的功能 ，又有更新元素的功能
 export function patch(oldVNode, vnode) {
+  // 组件的挂载
+  if (!oldVNode) {
+    return createElm(vnode) // vm.$el  对应的就是组件渲染的结果了
+  }
+
   // 写的是初渲染流程
   const isRealElement = oldVNode.nodeType
   if (isRealElement) {
@@ -198,7 +218,7 @@ function updateChildren(el, oldChildren, newChildren) {
         el.insertBefore(moveVnode.el, oldStartVnode.el) // 将 moveVnode 移动到 oldStartVnode的前面（把复用节点 移动到 旧列表头指针指向的节点 前面）
         oldChildren[moveIndex] = undefined // 表示这个旧节点已经被移动过了
         patchVnode(moveVnode, newStartVnode) // 比对属性和子节点
-      } 
+      }
       // 找不到相同的老节点
       else {
         el.insertBefore(createElm(newStartVnode), oldStartVnode.el) // 将 创建的节点 移动到 oldStartVnode的前面（把创建的节点 移动到 旧列表头指针指向的节点 前面）
