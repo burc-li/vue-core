@@ -24,6 +24,17 @@ LIFECYCLE.forEach(hook => {
   }
 })
 
+// 策略 - 组件选项
+strats.components = function (parent, child) {
+  const res = Object.create(parent) // 创建一个 空对象{}，并将其隐式原型链接到parent上，res.__proto__ = parent
+  if (child) {
+    for (let key in child) {
+      res[key] = child[key] // 返回的是构造的对象 可以拿到父亲原型上的属性，并且将儿子的都拷贝到自己身上
+    }
+  }
+  return res
+}
+
 // 合并选项
 export function mergeOptions(parent, child) {
   const options = {}

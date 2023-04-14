@@ -492,6 +492,11 @@
    * @name 虚拟DOM相关方法
    */
 
+  // 是否是预定的标签，用于判断是标签名还是组件名
+  const isReservedTag = tag => {
+    return ['a', 'div', 'p', 'button', 'ul', 'li', 'span'].includes(tag);
+  };
+
   // h()  _c() 创建元素的虚拟节点
   function createElementVNode(vm, tag, data, ...children) {
     if (data == null) {
@@ -501,7 +506,32 @@
     if (key) {
       delete data.key;
     }
-    return vnode(vm, tag, key, data, children);
+    // 是标签
+    if (isReservedTag(tag)) {
+      return vnode(vm, tag, key, data, children);
+    }
+    // 是组件
+    else {
+      let Ctor = vm.$options.components[tag]; // Ctor就是组件的定义 可能是一个Sub类，也可能是对象
+      return createComponentVnode(vm, tag, key, data, children, Ctor);
+    }
+  }
+  function createComponentVnode(vm, tag, key, data, children, Ctor) {
+    if (typeof Ctor === 'object') {
+      Ctor = vm.$options._base.extend(Ctor); // 即 Vue.extend(Ctor) ？？？ _base要挂载到Vue.options上 ！ vm.constructor.extend = Vue.extend or Sub.prototype.extend(即Vue.prototype.extend)
+    }
+
+    data.hook = {
+      init(vnode) {
+        // 稍后创造真实节点的时候 如果是组件则调用此init方法
+        let instance = vnode.componentInstance = new vnode.componentOptions.Ctor(); // 保存组件的实例到虚拟节点上
+        instance.$mount(); // instance.$el
+      }
+    };
+
+    return vnode(vm, tag, key, data, children, null, {
+      Ctor
+    });
   }
 
   // _v() 创建文本虚拟节点
@@ -511,14 +541,15 @@
 
   // VNode 和 AST一样吗？ AST做的是语法层面的转化，他描述的是语法本身 (可以描述 js css html)
   // 我们的VNode 是描述的dom元素，可以增加一些自定义属性
-  function vnode(vm, tag, key, data, children, text) {
+  function vnode(vm, tag, key, data, children, text, componentOptions) {
     return {
       vm,
       tag,
       key,
       data,
       children,
-      text
+      text,
+      componentOptions // 组件的构造函数
       // ....
     };
   }
@@ -539,6 +570,18 @@
    * @todo 3.3、新旧节点都有孩子 - diff核心算法
    */
 
+  // 判断是否是组件
+  function createComponent(vnode) {
+    let i = vnode.data;
+    if ((i = i.hook) && (i = i.init)) {
+      i(vnode); // 初始化组件，data.hook.init
+    }
+
+    if (vnode.componentInstance) {
+      return true; // 说明是组件
+    }
+  }
+
   // 利用vnode创建真实元素
   function createElm(vnode) {
     let {
@@ -548,6 +591,10 @@
       text
     } = vnode;
     if (typeof tag === 'string') {
+      // 组件
+      if (createComponent(vnode)) {
+        return vnode.componentInstance.$el;
+      }
       // 标签
       vnode.el = document.createElement(tag); // 这里将真实节点和虚拟节点对应起来，后续如果修改属性了
       patchProps(vnode.el, {}, data);
@@ -592,6 +639,11 @@
 
   // patch既有初始化元素的功能 ，又有更新元素的功能
   function patch(oldVNode, vnode) {
+    // 组件的挂载
+    if (!oldVNode) {
+      return createElm(vnode); // vm.$el  对应的就是组件渲染的结果了
+    }
+
     // 写的是初渲染流程
     const isRealElement = oldVNode.nodeType;
     if (isRealElement) {
@@ -1183,6 +1235,18 @@
     };
   });
 
+  // 策略 - 组件选项
+  strats.components = function (parent, child) {
+    const res = Object.create(parent); // 创建一个 空对象{}，并将其隐式原型链接到parent上，res.__proto__ = parent
+    if (child) {
+      for (let key in child) {
+        res[key] = child[key]; // 返回的是构造的对象 可以拿到父亲原型上的属性，并且将儿子的都拷贝到自己身上
+      }
+    }
+
+    return res;
+  };
+
   // 合并选项
   function mergeOptions(parent, child) {
     const options = {};
@@ -1218,7 +1282,9 @@
     Vue.prototype._init = function (options) {
       // vm.$options 就是获取用户的配置
       const vm = this;
-      // mixin原理 将合并后的选项挂载到vm实例上    this.constructor.options  即 构造函数上的options = Vue.options
+
+      // mixin原理 将合并后的选项挂载到vm实例上    
+      // this.constructor.options  即构造函数上的options = Vue.options|Sub.options
       vm.$options = mergeOptions(this.constructor.options, options);
       callHook(vm, 'beforeCreate'); // 访问不到 this.xxx
 
@@ -1263,224 +1329,41 @@
    * @name 全局API
    */
   function initGlobalAPI(Vue) {
-    // 静态属性
-    Vue.options = {};
-    // 静态方法
+    // 静态属性 - 选项
+    Vue.options = {
+      _base: Vue
+    };
+    // 静态方法 - 混入
     Vue.mixin = function (mixin) {
       // 将 全局的options 和 用户的选项 进行合并
       this.options = mergeOptions(this.options, mixin);
       return this;
     };
-  }
 
-  // ------------- 为了方便观察前后的虚拟节点--测试的-----------------
-  const renderMap = function () {
-    // 1. 新旧节点不相同（判断节点的tag和节点的key），直接用新节点替换旧节点，无需比对
-    // let render1 = compileToFunction(`<h1 key='a'>旧节点</h1>`)
-    // let render2 = compileToFunction(`<h1 key='b'>新节点</h1>`)
+    // 静态方法 - 继承： 使用基础 Vue 构造器，创建一个“子类”。参数是一个包含组件选项的对象
+    Vue.extend = function (options) {
+      function Sub(options = {}) {
+        this._init(options); // 默认对子类进行初始化操作
+      }
+      // Sub -> Sub.prototype -> Vue.prototype  实例获取不到构造函数本身的全局方法，例如 Vue.mixin / Vue.extend / Sub.options
+      Sub.prototype = Object.create(Vue.prototype); // Sub.prototype.__proto__ === Vue.prototype
+      Sub.prototype.constructor = Sub;
 
-    // 2. 新旧节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
-    // 旧节点没孩子，新节点有孩子，挂载
-    // let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60; height: 85px"></h1>`)
-    // let render2 = compileToFunction(
-    //   `<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60; height: 85px"><li>1</li><li>2</li></h1>`,
-    // )
-
-    // 3. 新旧节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
-    // 旧节点没孩子，新节点有孩子，删除
-    // let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60; height: 85px"><li>1</li><li>2</li></h1>`)
-    // let render2 = compileToFunction(
-    //   `<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60; height: 85px"></h1>`,
-    // )
-
-    // 4. 新旧节点相同，且是标签，比较标签属性；然后比较两个节点的孩子
-    // 新旧节点都有孩子，（此时孩子是文本），更新文本内容
-    // let render1 = compileToFunction(`<h1 key="a" style="color: #de5e60; border: 1px solid #de5e60">旧节点</h1>`)
-    // let render2 = compileToFunction(`<h1 key="a" style="background: #FDE6D3; border: 1px solid #de5e60">新节点</h1>`)
-
-    // 5. 新旧节点相同，且是标签，比较标签属性；然后比较两个节点的孩子，新旧节点都有孩子
-    // 5.1 双端比较_1 - 旧孩子的头 比对 新孩子的头 - 同序列尾部挂载
-    // a b c d
-    // a b c d e f
-    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //   </ul>`,
-    // )
-    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //     <li key="e">e</li>
-    //     <li key="f">f</li>
-    //   </ul>`)
-
-    // 5.2 双端比较_1 - 旧孩子的头 比对 新孩子的头 - 同序列尾部卸载
-    // a b c d e f
-    // a b c d
-    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //     <li key="e">e</li>
-    //     <li key="f">f</li>
-    //   </ul>`,
-    // )
-    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //   </ul>`)
-
-    // 5.3 双端比较_2 - 旧孩子的尾 比对 新孩子的尾 - 同序列头部挂载
-    //     a b c d
-    // e f a b c d
-    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //   </ul>`,
-    // )
-    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="e">e</li>
-    //     <li key="f">f</li>
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //   </ul>`)
-
-    // 5.4 双端比较_2 - 旧孩子的尾 比对 新孩子的尾 - 同序列头部卸载
-    // e f a b c d
-    //     a b c d
-    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-    //     <li key="e">e</li>
-    //     <li key="f">f</li>
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //   </ul>`,
-    // )
-    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //   </ul>`)
-
-    // 5.5 双端比较_3 - 旧孩子的头 比对 新孩子的尾
-    // a b c d e
-    // c d e b a
-    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //     <li key="e">e</li>
-    //   </ul>`,
-    // )
-    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //     <li key="e">e</li>
-    //     <li key="b">b</li>
-    //     <li key="a">a</li>
-    //   </ul>`)
-
-    // 5.6 双端比较_4 - 旧孩子的尾 比对 新孩子的头
-    // a b c d e
-    // e a b c d
-    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //     <li key="e">e</li>
-    //   </ul>`,
-    // )
-    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="e">e</li>
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //   </ul>`)
-
-    // 5.7 双端比较_3 or 双端比较_4 - 倒序
-    // a b c d e
-    // e d c b a
-    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //     <li key="e">e</li>
-    //   </ul>`,
-    // )
-    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="e">e</li>
-    //     <li key="d">d</li>
-    //     <li key="c">c</li>
-    //     <li key="b">b</li>
-    //     <li key="a">a</li>
-    //   </ul>`)
-
-    // 5.8 乱序比对
-    // v w a b c j m n
-    // v w c b a h m n
-    let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-      <li key="v">v</li>
-      <li key="w">w</li>
-      <li key="a">a</li>
-      <li key="b">b</li>
-      <li key="c">c</li>
-      <li key="j">j</li>
-      <li key="m">m</li>
-      <li key="n">n</li>
-    </ul>`);
-    let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-      <li key="v">v</li>
-      <li key="w">w</li>
-      <li key="c">c</li>
-      <li key="b">b</li>
-      <li key="a">a</li>
-      <li key="h">h</li>
-      <li key="m">m</li>
-      <li key="n">n</li>
-    </ul>`);
-    return {
-      render1,
-      render2
+      // 将全局的 Vue.options 和 用户选项 合并
+      // 对于 Sub.options.components 来说【键值对 取 options.components中的数据，__proto__ 指向 Vue.options.components，即Sub.options.components.__proto__ = Vue.options.components】
+      Sub.options = mergeOptions(Vue.options, options);
+      return Sub;
     };
-  };
-  const diffDemo = function () {
-    let render1 = renderMap().render1;
-    let vm1 = new Vue({
-      data: {
-        name: 'burc'
-      }
-    });
-    let prevVnode = render1.call(vm1);
-    let el = createElm(prevVnode);
-    document.body.appendChild(el);
-    let render2 = renderMap().render2;
-    let vm2 = new Vue({
-      data: {
-        name: 'burc'
-      }
-    });
-    let nextVnode = render2.call(vm2);
-    setTimeout(() => {
-      patch(prevVnode, nextVnode);
-    }, 1000);
-  };
+
+    // 静态属性 - 缓存全局组件 {key(string): value(Sub构造函数)}
+    Vue.options.components = {};
+    // 静态方法 - 注册全局组件
+    Vue.component = function (id, definition) {
+      // 如果 definition是一个函数，说明用户自己调用了 Vue.extend
+      definition = typeof definition === 'function' ? definition : Vue.extend(definition);
+      Vue.options.components[id] = definition; // definition 最终是一个Sub构造函数
+    };
+  }
 
   /**
    * @name 实现Vue构造函数
@@ -1496,8 +1379,6 @@
   initStateMixin(Vue); // 在Vue原型上扩展 $nextTick $watch 方法
 
   initGlobalAPI(Vue); // 在Vue上扩展全局属性和方法 Vue.options Vue.mixin
-
-  diffDemo(); // 测试diff，方便观察前后的虚拟节点
 
   return Vue;
 

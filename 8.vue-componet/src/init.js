@@ -13,7 +13,9 @@ export function initMixin(Vue) {
   Vue.prototype._init = function (options) {
     // vm.$options 就是获取用户的配置
     const vm = this
-    // mixin原理 将合并后的选项挂载到vm实例上    this.constructor.options  即 构造函数上的options = Vue.options
+    
+    // mixin原理 将合并后的选项挂载到vm实例上    
+    // this.constructor.options  即构造函数上的options = Vue.options|Sub.options
     vm.$options = mergeOptions(this.constructor.options, options)
 
     callHook(vm, 'beforeCreate') // 访问不到 this.xxx
