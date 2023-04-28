@@ -1377,7 +1377,7 @@
 
     // 5.5 双端比较_3 - 旧孩子的头 比对 新孩子的尾
     // a b c d e
-    // c d e b a
+    // e d c b a
     // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
     //     <li key="a">a</li>
     //     <li key="b">b</li>
@@ -1387,9 +1387,9 @@
     //   </ul>`,
     // )
     // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
     //     <li key="e">e</li>
+    //     <li key="d">d</li>
+    //     <li key="c">c</li>
     //     <li key="b">b</li>
     //     <li key="a">a</li>
     //   </ul>`)
@@ -1397,21 +1397,20 @@
     // 5.6 双端比较_4 - 旧孩子的尾 比对 新孩子的头
     // a b c d e
     // e a b c d
-    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //     <li key="e">e</li>
-    //   </ul>`,
-    // )
-    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-    //     <li key="e">e</li>
-    //     <li key="a">a</li>
-    //     <li key="b">b</li>
-    //     <li key="c">c</li>
-    //     <li key="d">d</li>
-    //   </ul>`)
+    let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+    <li key="a">a</li>
+    <li key="b">b</li>
+    <li key="c">c</li>
+    <li key="d">d</li>
+    <li key="e">e</li>
+  </ul>`);
+    let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+      <li key="e">e</li>
+      <li key="a">a</li>
+      <li key="b">b</li>
+      <li key="c">c</li>
+      <li key="d">d</li>
+    </ul>`);
 
     // 5.7 双端比较_3 or 双端比较_4 - 倒序
     // a b c d e
@@ -1433,28 +1432,34 @@
     //   </ul>`)
 
     // 5.8 乱序比对
-    // v w a b c j m n
-    // v w c b a h m n
-    let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
-      <li key="v">v</li>
-      <li key="w">w</li>
-      <li key="a">a</li>
-      <li key="b">b</li>
-      <li key="c">c</li>
-      <li key="j">j</li>
-      <li key="m">m</li>
-      <li key="n">n</li>
-    </ul>`);
-    let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
-      <li key="v">v</li>
-      <li key="w">w</li>
-      <li key="c">c</li>
-      <li key="b">b</li>
-      <li key="a">a</li>
-      <li key="h">h</li>
-      <li key="m">m</li>
-      <li key="n">n</li>
-    </ul>`);
+    // v w x (a b c d) y m n
+    // v w y (c b a e) x m n
+    // let render1 = compileToFunction(`<ul style="color: #de5e60; border: 1px solid #de5e60">
+    //     <li key="v">v</li>
+    //     <li key="w">w</li>
+    //     <li key="x">x</li>
+    //     <li key="a">a</li>
+    //     <li key="b">b</li>
+    //     <li key="c">c</li>
+    //     <li key="d">d</li>
+    //     <li key="y">y</li>
+    //     <li key="m">m</li>
+    //     <li key="n">n</li>
+    //   </ul>`,
+    // )
+    // let render2 = compileToFunction(`<ul style="background: #FDE6D3; border: 1px solid #de5e60">
+    //     <li key="v">v</li>
+    //     <li key="w">w</li>
+    //     <li key="x">x</li>
+    //     <li key="c">c</li>
+    //     <li key="b">b</li>
+    //     <li key="a">a</li>
+    //     <li key="e">e</li>
+    //     <li key="y">y</li>
+    //     <li key="m">m</li>
+    //     <li key="n">n</li>
+    //   </ul>`)
+
     return {
       render1,
       render2
@@ -1468,6 +1473,7 @@
       }
     });
     let prevVnode = render1.call(vm1);
+    console.log('vnode2', prevVnode);
     let el = createElm(prevVnode);
     document.body.appendChild(el);
     let render2 = renderMap().render2;
@@ -1479,6 +1485,9 @@
     let nextVnode = render2.call(vm2);
     setTimeout(() => {
       patch(prevVnode, nextVnode);
+
+      // let newEl = createElm(nextVnode);
+      // el.parentNode.replaceChild(newEl,el)
     }, 1000);
   };
 
