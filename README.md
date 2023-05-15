@@ -38,7 +38,6 @@ npm run dev
 主要介绍 Vue.set原理
 
 详情可参考掘金地址：
-
 [【Vue2.x源码系列04】依赖收集（Dep、Watcher、Observer）](https://juejin.cn/post/7213672268152324151)
 
 #### 4.vue-mixin
