@@ -718,14 +718,14 @@
       // 根据旧的列表做一个映射关系，拿新的节点去找，找到则移动；找不到则添加；最后删除多余的旧节点
       else {
         let moveIndex = map[newStartVnode.key];
-        // 找的到相同的老节点
-        if (moveIndex !== undefined) {
+        // 找的到相同key的老节点，并且是相同节点
+        if (moveIndex !== undefined && isSameVnode(oldChildren[moveIndex], newStartVnode)) {
           let moveVnode = oldChildren[moveIndex]; // 复用旧的节点
           el.insertBefore(moveVnode.el, oldStartVnode.el); // 将 moveVnode 移动到 oldStartVnode的前面（把复用节点 移动到 旧列表头指针指向的节点 前面）
           oldChildren[moveIndex] = undefined; // 表示这个旧节点已经被移动过了
           patchVnode(moveVnode, newStartVnode); // 比对属性和子节点
         }
-        // 找不到相同的老节点
+        // 找不到相同key的老节点 or 找的到相同key的老节点但tag不相同
         else {
           el.insertBefore(createElm(newStartVnode), oldStartVnode.el); // 将 创建的节点 移动到 oldStartVnode的前面（把创建的节点 移动到 旧列表头指针指向的节点 前面）
         }
