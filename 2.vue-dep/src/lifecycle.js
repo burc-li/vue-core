@@ -108,12 +108,3 @@ export function mountComponent(vm, el) {
 // 3)  将ast语法树 转换成 指定格式的render函数字符串，利用模版引擎再次转换成 render函数，后续每次数据更新可以只执行render函数 (无需再次执行ast转化的过程)
 // 4） 利用render函数去创建 虚拟DOM（使用响应式数据）
 // 5） 根据生成的虚拟节点创造真实的DOM
-
-// 调用生命周期钩子函数
-export function callHook(vm, hook) {
-  const handlers = vm.$options[hook]
-  console.log('>>', handlers)
-  if (handlers) {
-    handlers.forEach(handler => handler.call(vm))
-  }
-}

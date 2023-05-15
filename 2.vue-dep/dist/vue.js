@@ -567,15 +567,6 @@
   // 4） 利用render函数去创建 虚拟DOM（使用响应式数据）
   // 5） 根据生成的虚拟节点创造真实的DOM
 
-  // 调用生命周期钩子函数
-  function callHook(vm, hook) {
-    const handlers = vm.$options[hook];
-    console.log('>>', handlers);
-    if (handlers) {
-      handlers.forEach(handler => handler.call(vm));
-    }
-  }
-
   /**
    * @name 重写数组7个可以改变自身的方法，切片编程
    * @todo 1. Vue 的响应式是通过 Object.defineProperty() 实现的，这个 api 没办法监听数组长度的变化，也就没办法监听数组的新增。
@@ -752,59 +743,7 @@
   }
 
   /**
-   * @name 工具类方法
-   * @decs 重点关注下 策略模式 的应用，可以大大减少 if else 代码量
-   */
-
-  const strats = {};
-  const LIFECYCLE = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed'];
-  LIFECYCLE.forEach(hook => {
-    strats[hook] = function (p, c) {
-      // 第一次 { } { created: function(){} }   => { created: [fn] }
-      // 第二次 { created: [fn] }  { created: function(){} } => { created: [fn,fn] }
-      // 第三次 { created: [fn,fn] }  { } => { created: [fn,fn] }
-      if (c) {
-        if (p) {
-          // 如果儿子有，父亲有
-          return p.concat(c);
-        } else {
-          // 儿子有，父亲没有，则将儿子包装成数组
-          return [c];
-        }
-      } else {
-        return p; // 如果儿子没有，则用父亲即可
-      }
-    };
-  });
-
-  // 合并选项
-  function mergeOptions(parent, child) {
-    const options = {};
-    // 循环老的options { }
-    for (let key in parent) {
-      mergeField(key);
-    }
-    // 循环新的options { created: function(){} }
-    for (let key in child) {
-      if (!parent.hasOwnProperty(key)) {
-        mergeField(key);
-      }
-    }
-    function mergeField(key) {
-      // 策略模式 用策略模式减少if /else
-      if (strats[key]) {
-        options[key] = strats[key](parent[key], child[key]);
-      } else {
-        // 如果不在策略中则以儿子为主
-        options[key] = child[key] || parent[key];
-      }
-    }
-    return options;
-  }
-
-  /**
    * @name 给Vue扩展初始化方法
-   * @desc mixin原理入口也写在这了
    */
 
   // 就是给Vue增加init方法的
@@ -813,15 +752,10 @@
     Vue.prototype._init = function (options) {
       // vm.$options 就是获取用户的配置
       const vm = this;
-
-      // mixin原理 合并选项  this.constructor.options  即 构造函数上的options = Vue.options
-      vm.$options = mergeOptions(this.constructor.options, options);
-      callHook(vm, 'beforeCreate'); // 访问不到 this.xxx
+      vm.$options = options; // 将用户的选项挂载到实例上
 
       // 初始化状态
       initState(vm);
-      callHook(vm, 'created'); // 可以访问到 this.xxx
-
       if (options.el) {
         vm.$mount(options.el); // 实现数据的挂载
       }
@@ -856,20 +790,6 @@
   }
 
   /**
-   * @name 全局API
-   */
-  function initGlobalAPI(Vue) {
-    // 静态属性
-    Vue.options = {};
-    // 静态方法
-    Vue.mixin = function (mixin) {
-      // 将 全局的options 和 用户的选项 进行合并
-      this.options = mergeOptions(this.options, mixin);
-      return this;
-    };
-  }
-
-  /**
    * @name 实现Vue构造函数
    */
 
@@ -882,8 +802,6 @@
 
   initMixin(Vue); // 在Vue原型上扩展init方法  Vue.prototype._init  Vue.prototype.$mount
   initLifeCycle(Vue); // 在Vue原型上扩展 render 函数相关的方法   Vue.prototype._render   Vue.prototype._update
-
-  initGlobalAPI(Vue); // 在Vue上扩展全局属性和方法 Vue.options Vue.mixin
 
   return Vue;
 

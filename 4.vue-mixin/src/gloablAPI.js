@@ -1,5 +1,6 @@
 /**
  * @name 全局API
+ * @desc mixin方法
  */
 
 import { mergeOptions } from './utils'

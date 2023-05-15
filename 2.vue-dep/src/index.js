@@ -4,7 +4,6 @@
 
 import { initMixin } from './init'
 import { initLifeCycle } from './lifecycle'
-import { initGlobalAPI } from './gloablAPI'
 
 import { nextTick } from "./util/next-tick"
 
@@ -17,7 +16,5 @@ Vue.prototype.$nextTick = nextTick // 把 nextTick 挂载到vue原型上，方�
 
 initMixin(Vue) // 在Vue原型上扩展init方法  Vue.prototype._init  Vue.prototype.$mount
 initLifeCycle(Vue) // 在Vue原型上扩展 render 函数相关的方法   Vue.prototype._render   Vue.prototype._update
-
-initGlobalAPI(Vue) // 在Vue上扩展全局属性和方法 Vue.options Vue.mixin
 
 export default Vue
